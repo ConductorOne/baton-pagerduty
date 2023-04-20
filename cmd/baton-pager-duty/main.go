@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ConductorOne/baton-pager-duty/pkg/connector"
 	"github.com/conductorone/baton-sdk/pkg/cli"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/sdk"
 	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -25,6 +27,7 @@ func main() {
 	}
 
 	cmd.Version = version
+	cmdFlags(cmd)
 
 	err = cmd.Execute()
 	if err != nil {
@@ -35,14 +38,19 @@ func main() {
 
 func getConnector(ctx context.Context, cfg *config) (types.ConnectorServer, error) {
 	l := ctxzap.Extract(ctx)
-
-	c, err := sdk.NewEmptyConnector()
+	pagerDutyConnector, err := connector.New(ctx, cfg.AccessToken)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err
 	}
 
-	return c, nil
+	connector, err := connectorbuilder.NewConnector(ctx, pagerDutyConnector)
+	if err != nil {
+		l.Error("error creating connector", zap.Error(err))
+		return nil, err
+	}
+
+	return connector, nil
 }
 
 // run is where the process of syncing with the connector is implemented.
