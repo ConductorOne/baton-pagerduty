@@ -22,6 +22,13 @@ var (
 			v2.ResourceType_TRAIT_USER,
 		},
 	}
+	resourceTypeRole = &v2.ResourceType{
+		Id:          "role",
+		DisplayName: "Role",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_ROLE,
+		},
+	}
 )
 
 type PagerDuty struct {
@@ -32,6 +39,7 @@ func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.Res
 	return []connectorbuilder.ResourceSyncer{
 		teamBuilder(pd.client),
 		userBuilder(pd.client),
+		roleBuilder(pd.client),
 	}
 }
 
