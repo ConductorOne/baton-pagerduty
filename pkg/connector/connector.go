@@ -15,7 +15,9 @@ var (
 	resourceTypeTeam = &v2.ResourceType{
 		Id:          "team",
 		DisplayName: "Team",
-		Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_GROUP},
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_GROUP,
+		},
 	}
 	resourceTypeUser = &v2.ResourceType{
 		Id:          "user",
@@ -69,7 +71,7 @@ func (pd *PagerDuty) Validate(ctx context.Context) (annotations.Annotations, err
 	return nil, nil
 }
 
-// New returns the GitHub connector configured to sync against the instance URL.
+// New returns the PagerDuty connector.
 func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
 	client := pagerduty.NewClient(accessToken)
 
