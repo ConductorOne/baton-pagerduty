@@ -15,8 +15,23 @@ import (
 )
 
 const (
-	roleMember = "member"
+	teamRole = "team"
+	userRole = "user"
+)
 
+const (
+	roleMember = "member"
+	roleOwner  = "owner"
+	roleAdmin  = "admin"
+
+	roleObserver  = "observer"
+	roleResponder = "responder"
+	roleManager   = "manager"
+
+	roleRestricted = "restricted_access"
+)
+
+const (
 	teamRoleObserver  = "team-observer"
 	teamRoleResponder = "team-responder"
 	teamRoleManager   = "team-manager"
@@ -24,24 +39,24 @@ const (
 	userRoleOwner      = "user-owner"
 	userRoleAdmin      = "user-admin"
 	userRoleObserver   = "user-observer"
-	userRoleResponder  = "user-responder"
-	userRoleManager    = "user-manager"
+	userRoleResponder  = "user-limited_user"
+	userRoleManager    = "user-user"
 	userRoleRestricted = "user-restricted_access"
 )
 
-var teamAccessRoles = []string{
-	teamRoleObserver,
-	teamRoleResponder,
-	teamRoleManager,
+var teamAccessRoles = map[string]string{
+	roleObserver:  teamRoleObserver,
+	roleResponder: teamRoleResponder,
+	roleManager:   teamRoleManager,
 }
 
-var userAccessRoles = []string{
-	userRoleOwner,
-	userRoleAdmin,
-	userRoleObserver,
-	userRoleResponder,
-	userRoleManager,
-	userRoleRestricted,
+var userAccessRoles = map[string]string{
+	roleOwner:      userRoleOwner,
+	roleAdmin:      userRoleAdmin,
+	roleObserver:   userRoleObserver,
+	roleResponder:  userRoleResponder,
+	roleManager:    userRoleManager,
+	roleRestricted: userRoleRestricted,
 }
 
 type GrantsProgress struct {
@@ -62,13 +77,13 @@ type roleResourceType struct {
 	GrantsProgress
 }
 
-func (t *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
-	return t.resourceType
+func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
+	return r.resourceType
 }
 
 // roleResource creates a new connector resource for a PagerDuty Role.
-func roleResource(role string) (*v2.Resource, error) {
-	displayName := titleCaser.String(role)
+func roleResource(role string, roleName string, roleType string) (*v2.Resource, error) {
+	displayName := titleCaser.String(fmt.Sprintf("%s-%s", roleType, roleName))
 	profile := map[string]interface{}{
 		"role_id":   role,
 		"role_name": displayName,
@@ -87,12 +102,12 @@ func roleResource(role string) (*v2.Resource, error) {
 	return resource, nil
 }
 
-func (t *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	rv := make([]*v2.Resource, 0, len(teamAccessRoles)+len(userAccessRoles))
-	for _, role := range userAccessRoles {
+	for roleName, role := range userAccessRoles {
 		roleCopy := role
 
-		urr, err := roleResource(roleCopy)
+		urr, err := roleResource(roleCopy, roleName, userRole)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -100,10 +115,10 @@ func (t *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, urr)
 	}
 
-	for _, role := range teamAccessRoles {
+	for roleName, role := range teamAccessRoles {
 		roleCopy := role
 
-		trr, err := roleResource(roleCopy)
+		trr, err := roleResource(roleCopy, roleName, teamRole)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -114,12 +129,12 @@ func (t *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 	return rv, "", nil, nil
 }
 
-func (t *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
 
 	entitlementOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(resourceTypeUser),
-		ent.WithDisplayName(fmt.Sprintf("%s role %s", resource.DisplayName, titleCaser.String(roleMember))),
+		ent.WithDisplayName(fmt.Sprintf("%s role", resource.DisplayName)),
 		ent.WithDescription(fmt.Sprintf("%s PagerDuty role", resource.DisplayName)),
 	}
 
@@ -128,7 +143,7 @@ func (t *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 	return rv, "", nil, nil
 }
 
-func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	// Handle pagination
 	bag, page, err := parsePageToken(pToken.Token, resource.Id)
 	if err != nil {
@@ -136,18 +151,18 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 	}
 
 	// Loop through all the teams and map them
-	if !t.teamsMapped {
+	if !r.teamsMapped {
 		paginationOpts := pagerduty.ListTeamOptions{
 			Limit:  ResourcesPageSize,
 			Offset: page,
 		}
 
-		teamsResponse, err := t.client.ListTeamsWithContext(ctx, paginationOpts)
+		teamsResponse, err := r.client.ListTeamsWithContext(ctx, paginationOpts)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list teams: %w", err)
 		}
 
-		t.teamIds = append(t.teamIds, mapTeamIds(teamsResponse.Teams)...)
+		r.teamIds = append(r.teamIds, mapTeamIds(teamsResponse.Teams)...)
 
 		if teamsResponse.More {
 			nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
@@ -160,18 +175,18 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		}
 
 		page = 0
-		t.teamsMapped = true
+		r.teamsMapped = true
 	}
 
 	// Loop through all team members and map received team members
-	if t.teamsMapped && (len(t.teamIds) > 0) && !t.teamMembersMapped {
+	if r.teamsMapped && (len(r.teamIds) > 0) && !r.teamMembersMapped {
 		paginationOpts := pagerduty.ListTeamMembersOptions{
 			Limit:  ResourcesPageSize,
 			Offset: page,
 		}
 
-		teamId := t.teamIds[t.teamIndex]
-		roleMembersResponse, err := t.client.ListTeamMembers(ctx, teamId, paginationOpts)
+		teamId := r.teamIds[r.teamIndex]
+		roleMembersResponse, err := r.client.ListTeamMembers(ctx, teamId, paginationOpts)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
 		}
@@ -181,7 +196,7 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			memberId, memberRole := member.User.ID, member.Role
 			teamMemberRole := fmt.Sprintf("team-%s", memberRole)
 
-			t.teamMemberRoles[teamMemberRole] = append(t.teamMemberRoles[teamMemberRole], memberId)
+			r.teamMemberRoles[teamMemberRole] = append(r.teamMemberRoles[teamMemberRole], memberId)
 		}
 
 		if roleMembersResponse.More {
@@ -194,9 +209,9 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			return nil, pageToken, nil, nil
 		}
 
-		t.teamIndex++
+		r.teamIndex++
 
-		if t.teamIndex < len(t.teamIds) {
+		if r.teamIndex < len(r.teamIds) {
 			nextPage := strconv.FormatUint(uint64(page), 10)
 			pageToken, err := bag.NextToken(nextPage)
 			if err != nil {
@@ -207,17 +222,17 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		}
 
 		page = 0
-		t.teamMembersMapped = true
+		r.teamMembersMapped = true
 	}
 
 	// Loop through all users and map received users
-	if !t.usersMapped {
+	if !r.usersMapped {
 		paginationOpts := pagerduty.ListUsersOptions{
 			Limit:  ResourcesPageSize,
 			Offset: page,
 		}
 
-		usersResponse, err := t.client.ListUsersWithContext(ctx, paginationOpts)
+		usersResponse, err := r.client.ListUsersWithContext(ctx, paginationOpts)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
 		}
@@ -227,7 +242,7 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			userId, uRole := user.ID, user.Role
 			userRole := fmt.Sprintf("user-%s", uRole)
 
-			t.userRoles[userRole] = append(t.userRoles[userRole], userId)
+			r.userRoles[userRole] = append(r.userRoles[userRole], userId)
 		}
 
 		if usersResponse.More {
@@ -240,7 +255,7 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			return nil, pageToken, nil, nil
 		}
 
-		t.usersMapped = true
+		r.usersMapped = true
 	}
 
 	// Parse the role name (saved as role id) from the role profile
@@ -257,9 +272,9 @@ func (t *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 	var rv []*v2.Grant
 
 	// loop through all user ids under listed role and build grants
-	for _, memberId := range getUserIdsUnderRole(roleName, t.userRoles, t.teamMemberRoles) {
+	for _, memberId := range getUserIdsUnderRole(roleName, r.userRoles, r.teamMemberRoles) {
 		// fetch user from pager duty
-		user, err := t.client.GetUserWithContext(ctx, memberId, pagerduty.GetUserOptions{})
+		user, err := r.client.GetUserWithContext(ctx, memberId, pagerduty.GetUserOptions{})
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to get user: %w", err)
 		}
