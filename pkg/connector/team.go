@@ -14,20 +14,6 @@ import (
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
-const (
-	teamRoleMember    = "member"
-	teamRoleObserver  = "observer"
-	teamRoleResponder = "responder"
-	teamRoleManager   = "manager"
-)
-
-var teamAccessRoles = []string{
-	teamRoleMember,
-	teamRoleObserver,
-	teamRoleResponder,
-	teamRoleManager,
-}
-
 type teamResourceType struct {
 	resourceType *v2.ResourceType
 	client       *pagerduty.Client
@@ -101,23 +87,13 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	rv := make([]*v2.Entitlement, 0, len(teamAccessRoles))
 
-	for _, role := range teamAccessRoles {
-		var createEntitlementFunc func(*v2.Resource, string, ...ent.EntitlementOption) *v2.Entitlement
-
-		if role == teamRoleMember {
-			createEntitlementFunc = ent.NewAssignmentEntitlement
-		} else {
-			createEntitlementFunc = ent.NewPermissionEntitlement
-		}
-
-		entitlementOptions := []ent.EntitlementOption{
-			ent.WithGrantableTo(resourceTypeUser),
-			ent.WithDisplayName(fmt.Sprintf("%s Team %s", resource.DisplayName, titleCaser.String(role))),
-			ent.WithDescription(fmt.Sprintf("Team %s role in PagerDuty", resource.DisplayName)),
-		}
-
-		rv = append(rv, createEntitlementFunc(resource, role, entitlementOptions...))
+	entitlementOptions := []ent.EntitlementOption{
+		ent.WithGrantableTo(resourceTypeUser),
+		ent.WithDisplayName(fmt.Sprintf("%s Team %s", resource.DisplayName, titleCaser.String(roleMember))),
+		ent.WithDescription(fmt.Sprintf("Team %s role in PagerDuty", resource.DisplayName)),
 	}
+
+	rv = append(rv, ent.NewAssignmentEntitlement(resource, roleMember, entitlementOptions...))
 
 	return rv, "", nil, nil
 }
@@ -148,7 +124,7 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
 	}
 
-	rv := make([]*v2.Grant, 0, len(teamMembersResponse.Members))
+	var rv []*v2.Grant
 	for _, member := range teamMembersResponse.Members {
 		user, err := t.client.GetUserWithContext(ctx, member.User.ID, pagerduty.GetUserOptions{})
 		if err != nil {
@@ -161,22 +137,10 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			return nil, "", nil, err
 		}
 
-		// check if the user role exists among supported ones
-		if !contains(teamAccessRoles, member.Role) {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: unsupported user role: %s", member.Role)
-		}
-
-		// Create a new grant for the team role
-		rv = append(rv, grant.NewGrant(
-			resource,
-			member.Role,
-			ur.Id,
-		))
-
 		// Create a new grant for the user membership role
 		rv = append(rv, grant.NewGrant(
 			resource,
-			teamRoleMember,
+			roleMember,
 			ur.Id,
 		))
 	}
