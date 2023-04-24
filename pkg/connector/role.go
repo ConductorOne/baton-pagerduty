@@ -15,8 +15,23 @@ import (
 )
 
 const (
-	roleMember = "member"
+	teamRole = "team"
+	userRole = "user"
+)
 
+const (
+	roleMember = "member"
+	roleOwner  = "owner"
+	roleAdmin  = "admin"
+
+	roleObserver  = "observer"
+	roleResponder = "responder"
+	roleManager   = "manager"
+
+	roleRestricted = "restricted_access"
+)
+
+const (
 	teamRoleObserver  = "team-observer"
 	teamRoleResponder = "team-responder"
 	teamRoleManager   = "team-manager"
@@ -24,24 +39,24 @@ const (
 	userRoleOwner      = "user-owner"
 	userRoleAdmin      = "user-admin"
 	userRoleObserver   = "user-observer"
-	userRoleResponder  = "user-responder"
-	userRoleManager    = "user-manager"
+	userRoleResponder  = "user-limited_user"
+	userRoleManager    = "user-user"
 	userRoleRestricted = "user-restricted_access"
 )
 
-var teamAccessRoles = []string{
-	teamRoleObserver,
-	teamRoleResponder,
-	teamRoleManager,
+var teamAccessRoles = map[string]string{
+	roleObserver:  teamRoleObserver,
+	roleResponder: teamRoleResponder,
+	roleManager:   teamRoleManager,
 }
 
-var userAccessRoles = []string{
-	userRoleOwner,
-	userRoleAdmin,
-	userRoleObserver,
-	userRoleResponder,
-	userRoleManager,
-	userRoleRestricted,
+var userAccessRoles = map[string]string{
+	roleOwner:      userRoleOwner,
+	roleAdmin:      userRoleAdmin,
+	roleObserver:   userRoleObserver,
+	roleResponder:  userRoleResponder,
+	roleManager:    userRoleManager,
+	roleRestricted: userRoleRestricted,
 }
 
 type GrantsProgress struct {
@@ -67,8 +82,8 @@ func (t *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 // roleResource creates a new connector resource for a PagerDuty Role.
-func roleResource(role string) (*v2.Resource, error) {
-	displayName := titleCaser.String(role)
+func roleResource(role string, roleName string, roleType string) (*v2.Resource, error) {
+	displayName := titleCaser.String(fmt.Sprintf("%s-%s", roleType, roleName))
 	profile := map[string]interface{}{
 		"role_id":   role,
 		"role_name": displayName,
@@ -89,10 +104,10 @@ func roleResource(role string) (*v2.Resource, error) {
 
 func (t *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	rv := make([]*v2.Resource, 0, len(teamAccessRoles)+len(userAccessRoles))
-	for _, role := range userAccessRoles {
+	for roleName, role := range userAccessRoles {
 		roleCopy := role
 
-		urr, err := roleResource(roleCopy)
+		urr, err := roleResource(roleCopy, roleName, userRole)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -100,10 +115,10 @@ func (t *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, urr)
 	}
 
-	for _, role := range teamAccessRoles {
+	for roleName, role := range teamAccessRoles {
 		roleCopy := role
 
-		trr, err := roleResource(roleCopy)
+		trr, err := roleResource(roleCopy, roleName, teamRole)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -119,7 +134,7 @@ func (t *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 
 	entitlementOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(resourceTypeUser),
-		ent.WithDisplayName(fmt.Sprintf("%s role %s", resource.DisplayName, titleCaser.String(roleMember))),
+		ent.WithDisplayName(fmt.Sprintf("%s role", resource.DisplayName)),
 		ent.WithDescription(fmt.Sprintf("%s PagerDuty role", resource.DisplayName)),
 	}
 
