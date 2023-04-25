@@ -99,16 +99,6 @@ func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource
 }
 
 func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	teamTrait, err := rs.GetGroupTrait(resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	teamId, ok := rs.GetProfileStringValue(teamTrait.Profile, "team_id")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("error fetching team id from team profile")
-	}
-
 	bag, page, err := parsePageToken(pToken.Token, resource.Id)
 	if err != nil {
 		return nil, "", nil, err
@@ -119,7 +109,7 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		Offset: page,
 	}
 
-	teamMembersResponse, err := t.client.ListTeamMembers(ctx, teamId, paginationOpts)
+	teamMembersResponse, err := t.client.ListTeamMembers(ctx, resource.Id.Resource, paginationOpts)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
 	}

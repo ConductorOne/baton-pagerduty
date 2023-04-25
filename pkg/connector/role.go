@@ -292,21 +292,10 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		}
 	}
 
-	// Parse the role name (saved as role id) from the role profile
-	roleTrait, err := rs.GetRoleTrait(resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
-
-	roleName, ok := rs.GetProfileStringValue(roleTrait.Profile, "role_id")
-	if !ok {
-		return nil, "", nil, fmt.Errorf("error fetching role id from role profile")
-	}
-
 	var rv []*v2.Grant
 
 	// loop through all user ids under listed role and build grants
-	for _, memberId := range getUserIdsUnderRole(roleName, r.userRoles, r.teamMemberRoles) {
+	for _, memberId := range getUserIdsUnderRole(resource.Id.Resource, r.userRoles, r.teamMemberRoles) {
 		// fetch user from pager duty
 		user, err := r.client.GetUserWithContext(ctx, memberId, pagerduty.GetUserOptions{})
 		if err != nil {
