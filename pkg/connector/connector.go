@@ -2,39 +2,82 @@ package connector
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// TODO: implement your connector here
-type connectorImpl struct {
+var (
+	resourceTypeTeam = &v2.ResourceType{
+		Id:          "team",
+		DisplayName: "Team",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_GROUP,
+		},
+	}
+	resourceTypeUser = &v2.ResourceType{
+		Id:          "user",
+		DisplayName: "User",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_USER,
+		},
+	}
+	resourceTypeRole = &v2.ResourceType{
+		Id:          "role",
+		DisplayName: "Role",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_ROLE,
+		},
+	}
+)
+
+type PagerDuty struct {
+	client *pagerduty.Client
 }
 
-func (c *connectorImpl) ListResourceTypes(ctx context.Context, req *v2.ResourceTypesServiceListResourceTypesRequest) (*v2.ResourceTypesServiceListResourceTypesResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
+	return []connectorbuilder.ResourceSyncer{
+		teamBuilder(pd.client),
+		userBuilder(pd.client),
+		roleBuilder(pd.client),
+	}
 }
 
-func (c *connectorImpl) ListResources(ctx context.Context, req *v2.ResourcesServiceListResourcesRequest) (*v2.ResourcesServiceListResourcesResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+// Metadata returns metadata about the connector.
+func (pd *PagerDuty) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
+	return &v2.ConnectorMetadata{
+		DisplayName: "PagerDuty",
+	}, nil
 }
 
-func (c *connectorImpl) ListEntitlements(ctx context.Context, req *v2.EntitlementsServiceListEntitlementsRequest) (*v2.EntitlementsServiceListEntitlementsResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+// Validate hits the PagerDuty API to validate that the configured credentials are valid and compatible.
+func (pd *PagerDuty) Validate(ctx context.Context) (annotations.Annotations, error) {
+	// should be able to list users
+	_, err := pd.client.ListUsersWithContext(ctx, pagerduty.ListUsersOptions{})
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Provided Access Token is invalid")
+	}
+
+	// in case it's a user token, check the role for compatibility
+	user, _ := pd.client.GetCurrentUserWithContext(ctx, pagerduty.GetCurrentUserOptions{})
+	if user != nil && user.Role == "restricted_access" {
+		return nil, status.Error(codes.PermissionDenied, "Provided Access Token must be an admin token")
+	}
+
+	return nil, nil
 }
 
-func (c *connectorImpl) ListGrants(ctx context.Context, req *v2.GrantsServiceListGrantsRequest) (*v2.GrantsServiceListGrantsResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
+// New returns the PagerDuty connector.
+func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
+	client := pagerduty.NewClient(accessToken)
 
-func (c *connectorImpl) GetMetadata(ctx context.Context, req *v2.ConnectorServiceGetMetadataRequest) (*v2.ConnectorServiceGetMetadataResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
+	pd := &PagerDuty{
+		client: client,
+	}
 
-func (c *connectorImpl) Validate(ctx context.Context, req *v2.ConnectorServiceValidateRequest) (*v2.ConnectorServiceValidateResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (c *connectorImpl) GetAsset(req *v2.AssetServiceGetAssetRequest, server v2.AssetService_GetAssetServer) error {
-	return fmt.Errorf("not implemented")
+	return pd, nil
 }
