@@ -15,6 +15,16 @@ const ResourcesPageSize = 50
 
 var titleCaser = cases.Title(language.English)
 
+func handleNextPage(bag *pagination.Bag, page uint) (string, error) {
+	nextPage := strconv.FormatUint(uint64(page), 10)
+	pageToken, err := bag.NextToken(nextPage)
+	if err != nil {
+		return "", err
+	}
+
+	return pageToken, nil
+}
+
 func parsePageToken(i string, resourceID *v2.ResourceId) (*pagination.Bag, uint, error) {
 	b := &pagination.Bag{}
 	err := b.Unmarshal(i)

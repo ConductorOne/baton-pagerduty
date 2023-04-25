@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -143,6 +142,91 @@ func (r *roleResourceType) Entitlements(_ context.Context, resource *v2.Resource
 	return rv, "", nil, nil
 }
 
+func (r *roleResourceType) MapTeams(ctx context.Context, page uint) (uint, error) {
+	paginationOpts := pagerduty.ListTeamOptions{
+		Limit:  ResourcesPageSize,
+		Offset: page,
+	}
+
+	teamsResponse, err := r.client.ListTeamsWithContext(ctx, paginationOpts)
+	if err != nil {
+		return 0, fmt.Errorf("pager-duty-connector: failed to list teams: %w", err)
+	}
+
+	r.teamIds = append(r.teamIds, mapTeamIds(teamsResponse.Teams)...)
+
+	if teamsResponse.More {
+		return page + ResourcesPageSize, nil
+	}
+
+	r.teamsMapped = true
+
+	return 0, nil
+}
+
+func (r *roleResourceType) MapTeamMembers(ctx context.Context, page uint) (uint, error) {
+	paginationOpts := pagerduty.ListTeamMembersOptions{
+		Limit:  ResourcesPageSize,
+		Offset: page,
+	}
+
+	teamId := r.teamIds[r.teamIndex]
+	roleMembersResponse, err := r.client.ListTeamMembers(ctx, teamId, paginationOpts)
+	if err != nil {
+		return 0, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
+	}
+
+	// map roles of team members to state map (role -> []member ids)
+	for _, member := range roleMembersResponse.Members {
+		memberId, memberRole := member.User.ID, member.Role
+		teamMemberRole := fmt.Sprintf("team-%s", memberRole)
+
+		r.teamMemberRoles[teamMemberRole] = append(r.teamMemberRoles[teamMemberRole], memberId)
+	}
+
+	if roleMembersResponse.More {
+		return page + ResourcesPageSize, nil
+	}
+
+	r.teamIndex++
+
+	if r.teamIndex < len(r.teamIds) {
+		return r.MapTeamMembers(ctx, 0)
+	}
+
+	r.teamMembersMapped = true
+
+	return 0, nil
+}
+
+func (r *roleResourceType) MapUsers(ctx context.Context, page uint) (uint, error) {
+	paginationOpts := pagerduty.ListUsersOptions{
+		Limit:  ResourcesPageSize,
+		Offset: page,
+	}
+
+	usersResponse, err := r.client.ListUsersWithContext(ctx, paginationOpts)
+	if err != nil {
+		return 0, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
+	}
+
+	// map roles of users to state map (role -> []member ids)
+	for _, user := range usersResponse.Users {
+		userId, uRole := user.ID, user.Role
+		userRole := fmt.Sprintf("user-%s", uRole)
+
+		r.userRoles[userRole] = append(r.userRoles[userRole], userId)
+	}
+
+	if usersResponse.More {
+		return page + ResourcesPageSize, nil
+	}
+
+	r.usersMapped = true
+
+	return 0, nil
+}
+
 func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	// Handle pagination
 	bag, page, err := parsePageToken(pToken.Token, resource.Id)
@@ -152,110 +236,60 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	// Loop through all the teams and map them
 	if !r.teamsMapped {
-		paginationOpts := pagerduty.ListTeamOptions{
-			Limit:  ResourcesPageSize,
-			Offset: page,
-		}
+		nextTeamPage, err := r.MapTeams(ctx, page)
 
-		teamsResponse, err := r.client.ListTeamsWithContext(ctx, paginationOpts)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list teams: %w", err)
+			return nil, "", nil, err
 		}
 
-		r.teamIds = append(r.teamIds, mapTeamIds(teamsResponse.Teams)...)
-
-		if teamsResponse.More {
-			nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-			pageToken, err := bag.NextToken(nextPage)
+		if nextTeamPage != 0 {
+			nextPage, err := handleNextPage(bag, nextTeamPage)
 			if err != nil {
 				return nil, "", nil, err
 			}
 
-			return nil, pageToken, nil, nil
+			return nil, nextPage, nil, nil
 		}
 
 		page = 0
-		r.teamsMapped = true
 	}
 
 	// Loop through all team members and map received team members
 	if r.teamsMapped && (len(r.teamIds) > 0) && !r.teamMembersMapped {
-		paginationOpts := pagerduty.ListTeamMembersOptions{
-			Limit:  ResourcesPageSize,
-			Offset: page,
-		}
+		nextMemberPage, err := r.MapTeamMembers(ctx, page)
 
-		teamId := r.teamIds[r.teamIndex]
-		roleMembersResponse, err := r.client.ListTeamMembers(ctx, teamId, paginationOpts)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
+			return nil, "", nil, err
 		}
 
-		// map roles of team members to state map (role -> []member ids)
-		for _, member := range roleMembersResponse.Members {
-			memberId, memberRole := member.User.ID, member.Role
-			teamMemberRole := fmt.Sprintf("team-%s", memberRole)
-
-			r.teamMemberRoles[teamMemberRole] = append(r.teamMemberRoles[teamMemberRole], memberId)
-		}
-
-		if roleMembersResponse.More {
-			nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-			pageToken, err := bag.NextToken(nextPage)
+		if nextMemberPage != 0 {
+			nextPage, err := handleNextPage(bag, nextMemberPage)
 			if err != nil {
 				return nil, "", nil, err
 			}
 
-			return nil, pageToken, nil, nil
-		}
-
-		r.teamIndex++
-
-		if r.teamIndex < len(r.teamIds) {
-			nextPage := strconv.FormatUint(uint64(page), 10)
-			pageToken, err := bag.NextToken(nextPage)
-			if err != nil {
-				return nil, "", nil, err
-			}
-
-			return nil, pageToken, nil, nil
+			return nil, nextPage, nil, nil
 		}
 
 		page = 0
-		r.teamMembersMapped = true
 	}
 
 	// Loop through all users and map received users
 	if !r.usersMapped {
-		paginationOpts := pagerduty.ListUsersOptions{
-			Limit:  ResourcesPageSize,
-			Offset: page,
-		}
+		nextUserPage, err := r.MapUsers(ctx, page)
 
-		usersResponse, err := r.client.ListUsersWithContext(ctx, paginationOpts)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
+			return nil, "", nil, err
 		}
 
-		// map roles of users to state map (role -> []member ids)
-		for _, user := range usersResponse.Users {
-			userId, uRole := user.ID, user.Role
-			userRole := fmt.Sprintf("user-%s", uRole)
-
-			r.userRoles[userRole] = append(r.userRoles[userRole], userId)
-		}
-
-		if usersResponse.More {
-			nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-			pageToken, err := bag.NextToken(nextPage)
+		if nextUserPage != 0 {
+			nextPage, err := handleNextPage(bag, nextUserPage)
 			if err != nil {
 				return nil, "", nil, err
 			}
 
-			return nil, pageToken, nil, nil
+			return nil, nextPage, nil, nil
 		}
-
-		r.usersMapped = true
 	}
 
 	// Parse the role name (saved as role id) from the role profile
