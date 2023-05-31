@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"golang.org/x/text/cases"
@@ -59,29 +58,4 @@ func convertPageToken(token string) (uint, error) {
 	}
 
 	return uint(page), nil
-}
-
-func mapTeamIds(teams []pagerduty.Team) []string {
-	ids := make([]string, 0, len(teams))
-	for _, team := range teams {
-		ids = append(ids, team.ID)
-	}
-
-	return ids
-}
-
-func getUserIdsUnderRole(role string, userIds map[string][]string, memberIds map[string][]string) []string {
-	for roleName, userIds := range userIds {
-		if roleName == role {
-			return userIds
-		}
-	}
-
-	for roleName, memberIds := range memberIds {
-		if roleName == role {
-			return memberIds
-		}
-	}
-
-	return nil
 }

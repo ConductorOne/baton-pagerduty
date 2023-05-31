@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -13,6 +12,12 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
+
+var teamAccessRoles = map[string]string{
+	roleObserver:  teamRoleObserver,
+	roleResponder: teamRoleResponder,
+	roleManager:   teamRoleManager,
+}
 
 type teamResourceType struct {
 	resourceType *v2.ResourceType
@@ -54,6 +59,11 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		Offset: page,
 	}
 
+	pageToken, err := handleNextPage(bag, page+ResourcesPageSize)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
 	teamsResponse, err := t.client.ListTeamsWithContext(ctx, paginationOpts)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list teams: %w", err)
@@ -71,17 +81,7 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, tr)
 	}
 
-	if teamsResponse.More {
-		nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-		pageToken, err := bag.NextToken(nextPage)
-		if err != nil {
-			return nil, "", nil, err
-		}
-
-		return rv, pageToken, nil, nil
-	}
-
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
@@ -107,6 +107,11 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 	paginationOpts := pagerduty.ListTeamMembersOptions{
 		Limit:  ResourcesPageSize,
 		Offset: page,
+	}
+
+	pageToken, err := handleNextPage(bag, page+ResourcesPageSize)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	teamMembersResponse, err := t.client.ListTeamMembers(ctx, resource.Id.Resource, paginationOpts)
@@ -135,17 +140,7 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		))
 	}
 
-	if teamMembersResponse.More {
-		nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-		pageToken, err := bag.NextToken(nextPage)
-		if err != nil {
-			return nil, "", nil, err
-		}
-
-		return rv, pageToken, nil, nil
-	}
-
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func teamBuilder(client *pagerduty.Client) *teamResourceType {

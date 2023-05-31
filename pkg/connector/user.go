@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/PagerDuty/go-pagerduty"
@@ -68,6 +67,11 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		Offset: page,
 	}
 
+	pageToken, err := handleNextPage(bag, page+ResourcesPageSize)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
 	usersResponse, err := u.client.ListUsersWithContext(ctx, paginationOpts)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
@@ -85,17 +89,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, ur)
 	}
 
-	if usersResponse.More {
-		nextPage := strconv.FormatUint(uint64(page+ResourcesPageSize), 10)
-		pageToken, err := bag.NextToken(nextPage)
-		if err != nil {
-			return nil, "", nil, err
-		}
-
-		return rv, pageToken, nil, nil
-	}
-
-	return rv, "", nil, nil
+	return rv, pageToken, nil, nil
 }
 
 func (u *userResourceType) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
