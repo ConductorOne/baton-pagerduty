@@ -81,7 +81,11 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, tr)
 	}
 
-	return rv, pageToken, nil, nil
+	if teamsResponse.More {
+		return rv, pageToken, nil, nil
+	}
+
+	return rv, "", nil, nil
 }
 
 func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
@@ -140,7 +144,11 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		))
 	}
 
-	return rv, pageToken, nil, nil
+	if teamMembersResponse.More {
+		return rv, pageToken, nil, nil
+	}
+
+	return rv, "", nil, nil
 }
 
 func teamBuilder(client *pagerduty.Client) *teamResourceType {
