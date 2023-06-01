@@ -13,6 +13,12 @@ import (
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
+const (
+	teamRoleObserver  = "team-observer"
+	teamRoleResponder = "team-responder"
+	teamRoleManager   = "team-manager"
+)
+
 var teamAccessRoles = map[string]string{
 	roleObserver:  teamRoleObserver,
 	roleResponder: teamRoleResponder,
@@ -99,6 +105,19 @@ func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource
 
 	rv = append(rv, ent.NewAssignmentEntitlement(resource, roleMember, entitlementOptions...))
 
+	// Create a new entitlement for each team role
+	for roleName, role := range teamAccessRoles {
+		rv = append(rv, ent.NewPermissionEntitlement(
+			resource,
+			role,
+			[]ent.EntitlementOption{
+				ent.WithGrantableTo(resourceTypeUser),
+				ent.WithDisplayName(fmt.Sprintf("%s Team Role %s", resource.DisplayName, titleCaser.String(roleName))),
+				ent.WithDescription(fmt.Sprintf("Team %s role %s in PagerDuty", resource.DisplayName, titleCaser.String(roleName))),
+			}...,
+		))
+	}
+
 	return rv, "", nil, nil
 }
 
@@ -140,6 +159,13 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		rv = append(rv, grant.NewGrant(
 			resource,
 			roleMember,
+			ur.Id,
+		))
+
+		// Create also new grant for each team role the user has
+		rv = append(rv, grant.NewGrant(
+			resource,
+			teamAccessRoles[member.Role],
 			ur.Id,
 		))
 	}
