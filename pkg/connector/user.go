@@ -89,7 +89,11 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 		rv = append(rv, ur)
 	}
 
-	return rv, pageToken, nil, nil
+	if usersResponse.More {
+		return rv, pageToken, nil, nil
+	}
+
+	return rv, "", nil, nil
 }
 
 func (u *userResourceType) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {

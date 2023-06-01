@@ -18,12 +18,6 @@ const (
 	roleManager   = "manager"
 )
 
-const (
-	teamRoleObserver  = "team-observer"
-	teamRoleResponder = "team-responder"
-	teamRoleManager   = "team-manager"
-)
-
 var (
 	resourceTypeTeam = &v2.ResourceType{
 		Id:          "team",
@@ -39,6 +33,13 @@ var (
 			v2.ResourceType_TRAIT_USER,
 		},
 	}
+	resourceTypeRole = &v2.ResourceType{
+		Id:          "role",
+		DisplayName: "Role",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_ROLE,
+		},
+	}
 )
 
 type PagerDuty struct {
@@ -49,6 +50,7 @@ func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.Res
 	return []connectorbuilder.ResourceSyncer{
 		teamBuilder(pd.client),
 		userBuilder(pd.client),
+		roleBuilder(pd.client),
 	}
 }
 
@@ -56,6 +58,7 @@ func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.Res
 func (pd *PagerDuty) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
 		DisplayName: "PagerDuty",
+		Description: "Connector syncing PagerDuty users, teams, and their roles to Baton",
 	}, nil
 }
 
