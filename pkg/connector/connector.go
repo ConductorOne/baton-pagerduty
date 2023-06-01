@@ -58,6 +58,7 @@ func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.Res
 func (pd *PagerDuty) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
 		DisplayName: "PagerDuty",
+		Description: "Connector syncing PagerDuty users, teams, and their roles to Baton",
 	}, nil
 }
 
