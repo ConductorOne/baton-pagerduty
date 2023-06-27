@@ -72,7 +72,7 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	teamsResponse, err := t.client.ListTeamsWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list teams: %w", err)
+		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list teams: %w", err)
 	}
 
 	rv := make([]*v2.Resource, 0, len(teamsResponse.Teams))
@@ -139,14 +139,14 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	teamMembersResponse, err := t.client.ListTeamMembers(ctx, resource.Id.Resource, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list team members: %w", err)
+		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list team members: %w", err)
 	}
 
 	var rv []*v2.Grant
 	for _, member := range teamMembersResponse.Members {
 		user, err := t.client.GetUserWithContext(ctx, member.User.ID, pagerduty.GetUserOptions{})
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list user: %w", err)
+			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list user: %w", err)
 		}
 
 		userCopy := user

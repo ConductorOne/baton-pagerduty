@@ -120,7 +120,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	usersResponse, err := r.client.ListUsersWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
+		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list users: %w", err)
 	}
 
 	var rv []*v2.Grant
@@ -134,7 +134,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		userCopy := user
 		ur, err := userResource(ctx, &userCopy)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to build user resource: %w", err)
+			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to build user resource: %w", err)
 		}
 
 		rv = append(rv, grant.NewGrant(

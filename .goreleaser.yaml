@@ -1,20 +1,20 @@
-project_name: baton-pager-duty
+project_name: baton-pagerduty
 builds:
-  - binary: baton-pager-duty
+  - binary: baton-pagerduty
     env:
       - CGO_ENABLED=0
     id: linux
-    main: ./cmd/baton-pager-duty
+    main: ./cmd/baton-pagerduty
     goos:
       - linux
     goarch:
       - amd64
       - arm64
-  - binary: baton-pager-duty
+  - binary: baton-pagerduty
     env:
       - CGO_ENABLED=0
     id: macos-amd64
-    main: ./cmd/baton-pager-duty
+    main: ./cmd/baton-pagerduty
     goos:
       - darwin
     goarch:
@@ -22,12 +22,12 @@ builds:
     hooks:
       post:
         - gon .gon-amd64.json
-        - mv dist/baton-pager-duty-darwin-amd64.signed.zip dist/macos-amd64_darwin_amd64_v1/baton-pager-duty
-  - binary: baton-pager-duty
+        - mv dist/baton-pagerduty-darwin-amd64.signed.zip dist/macos-amd64_darwin_amd64_v1/baton-pagerduty
+  - binary: baton-pagerduty
     env:
       - CGO_ENABLED=0
     id: macos-arm64
-    main: ./cmd/baton-pager-duty
+    main: ./cmd/baton-pagerduty
     goos:
       - darwin
     goarch:
@@ -35,7 +35,7 @@ builds:
     hooks:
       post:
         - gon .gon-arm64.json
-        - mv dist/baton-pager-duty-darwin-arm64.signed.zip dist/macos-arm64_darwin_arm64/baton-pager-duty
+        - mv dist/baton-pagerduty-darwin-arm64.signed.zip dist/macos-arm64_darwin_arm64/baton-pagerduty
 archives:
   - id: linux-archive
     builds:
@@ -71,9 +71,9 @@ brews:
     folder: Formula
     homepage: https://conductorone.com
     test: |
-      system "#{bin}/baton-pager-duty -v"
+      system "#{bin}/baton-pagerduty -v"
     install: |-
-      bin.install "baton-pager-duty"
+      bin.install "baton-pagerduty"
 changelog:
   filters:
     exclude:
