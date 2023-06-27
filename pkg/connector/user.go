@@ -74,7 +74,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	usersResponse, err := u.client.ListUsersWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pager-duty-connector: failed to list users: %w", err)
+		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list users: %w", err)
 	}
 
 	rv := make([]*v2.Resource, 0, len(usersResponse.Users))

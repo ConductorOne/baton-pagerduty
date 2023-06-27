@@ -3,14 +3,14 @@ GOARCH = $(shell go env GOARCH)
 BUILD_DIR = dist/${GOOS}_${GOARCH}
 
 ifeq ($(GOOS),windows)
-OUTPUT_PATH = ${BUILD_DIR}/baton-pager-duty.exe
+OUTPUT_PATH = ${BUILD_DIR}/baton-pagerduty.exe
 else
-OUTPUT_PATH = ${BUILD_DIR}/baton-pager-duty
+OUTPUT_PATH = ${BUILD_DIR}/baton-pagerduty
 endif
 
 .PHONY: build
 build:
-	go build -o ${OUTPUT_PATH} ./cmd/baton-pager-duty
+	go build -o ${OUTPUT_PATH} ./cmd/baton-pagerduty
 
 .PHONY: update-deps
 update-deps:

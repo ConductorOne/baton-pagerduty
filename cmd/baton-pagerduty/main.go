@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ConductorOne/baton-pager-duty/pkg/connector"
+	"github.com/ConductorOne/baton-pagerduty/pkg/connector"
 	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/types"
@@ -19,7 +19,7 @@ func main() {
 	ctx := context.Background()
 
 	cfg := &config{}
-	cmd, err := cli.NewCmd(ctx, "baton-pager-duty", cfg, validateConfig, getConnector)
+	cmd, err := cli.NewCmd(ctx, "baton-pagerduty", cfg, validateConfig, getConnector)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)

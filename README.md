@@ -1,8 +1,8 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 
-# `baton-pager-duty` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-pager-duty.svg)](https://pkg.go.dev/github.com/conductorone/baton-pager-duty) ![main ci](https://github.com/conductorone/baton-pager-duty/actions/workflows/main.yaml/badge.svg)
+# `baton-pagerduty` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-pagerduty.svg)](https://pkg.go.dev/github.com/conductorone/baton-pagerduty) ![main ci](https://github.com/conductorone/baton-pagerduty/actions/workflows/main.yaml/badge.svg)
 
-`baton-pager-duty` is a connector for PagerDuty built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the PagerDuty User provisioning API to sync data about teams, users and their roles.
+`baton-pagerduty` is a connector for PagerDuty built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the PagerDuty User provisioning API to sync data about teams, users and their roles.
 
 Check out [Baton](https://github.com/conductorone/baton) to learn more about the project in general.
 
@@ -21,16 +21,16 @@ Be aware that to sync all the users, teams and roles associated with them with u
 ## brew
 
 ```
-brew install conductorone/baton/baton conductorone/baton/baton-pager-duty
+brew install conductorone/baton/baton conductorone/baton/baton-pagerduty
 
-BATON_TOKEN=token baton-pager-duty
+BATON_TOKEN=token baton-pagerduty
 baton resources
 ```
 
 ## docker
 
 ```
-docker run --rm -v $(pwd):/out -e BATON_TOKEN=token ghcr.io/conductorone/baton-pager-duty:latest -f "/out/sync.c1z"
+docker run --rm -v $(pwd):/out -e BATON_TOKEN=token ghcr.io/conductorone/baton-pagerduty:latest -f "/out/sync.c1z"
 docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c1z" resources
 ```
 
@@ -38,20 +38,20 @@ docker run --rm -v $(pwd):/out ghcr.io/conductorone/baton:latest -f "/out/sync.c
 
 ```
 go install github.com/conductorone/baton/cmd/baton@main
-go install github.com/conductorone/baton-pager-duty/cmd/baton-pager-duty@main
+go install github.com/conductorone/baton-pagerduty/cmd/baton-pagerduty@main
 
-BATON_TOKEN=token baton-pager-duty
+BATON_TOKEN=token baton-pagerduty
 baton resources
 ```
 
 # Data Model
 
-`baton-pager-duty` will pull down information about the following PagerDuty resources:
+`baton-pagerduty` will pull down information about the following PagerDuty resources:
 
 - Users
 - Teams
 
-By default, `baton-pager-duty` will sync information only from account based on provided credential.
+By default, `baton-pagerduty` will sync information only from account based on provided credential.
 
 # Contributing, Support and Issues
 
@@ -59,14 +59,14 @@ We started Baton because we were tired of taking screenshots and manually buildi
 
 See [CONTRIBUTING.md](https://github.com/ConductorOne/baton/blob/main/CONTRIBUTING.md) for more details.
 
-# `baton-pager-duty` Command Line Usage
+# `baton-pagerduty` Command Line Usage
 
 ```
-baton-pager-duty
+baton-pagerduty
 
 Usage:
-  baton-pager-duty [flags]
-  baton-pager-duty [command]
+  baton-pagerduty [flags]
+  baton-pagerduty [command]
 
 Available Commands:
   completion         Generate the autocompletion script for the specified shell
@@ -74,11 +74,11 @@ Available Commands:
 
 Flags:
   -f, --file string           The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
-  -h, --help                  help for baton-pager-duty
+  -h, --help                  help for baton-pagerduty
       --log-format string     The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
       --log-level string      The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
       --token string          The PagerDuty access token used to connect to the PagerDuty API. ($BATON_TOKEN)
-  -v, --version               version for baton-pager-duty
+  -v, --version               version for baton-pagerduty
 
-Use "baton-pager-duty [command] --help" for more information about a command.
+Use "baton-pagerduty [command] --help" for more information about a command.
 ```

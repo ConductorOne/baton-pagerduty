@@ -1,3 +1,3 @@
 FROM gcr.io/distroless/static-debian11:nonroot
-ENTRYPOINT ["/baton-pager-duty"]
-COPY baton-pager-duty /
+ENTRYPOINT ["/baton-pagerduty"]
+COPY baton-pagerduty /
