@@ -1,4 +1,4 @@
-module github.com/ConductorOne/baton-pagerduty
+module github.com/conductorone/baton-pagerduty
 
 go 1.20
 
