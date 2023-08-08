@@ -3,6 +3,7 @@ package connector
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
@@ -58,4 +59,16 @@ func convertPageToken(token string) (uint, error) {
 	}
 
 	return uint(page), nil
+}
+
+// Id of entitlement has following format <resource_type>:<resource_id>:<entitlement_id>
+// extract resource_id and entitlement_id from it.
+func extractResourceIds(fullId string) (string, string, error) {
+	idParts := strings.Split(fullId, ":")
+
+	if len(idParts) != 3 {
+		return "", "", fmt.Errorf("invalid resource id: %s", fullId)
+	}
+
+	return idParts[1], idParts[2], nil
 }

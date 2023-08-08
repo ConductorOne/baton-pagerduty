@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -11,6 +12,8 @@ import (
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 const (
@@ -175,6 +178,82 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 	}
 
 	return rv, "", nil, nil
+}
+
+func (t *teamResourceType) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"pagerduty-connector: only users can be granted team membership",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("pagerduty-connector: only users can be granted team membership")
+	}
+
+	teamId, entitlementId, err := extractResourceIds(entitlement.Id)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to extract team and entitlement id from entitlement id: %w", err)
+	}
+
+	var roleId pagerduty.TeamUserRole
+
+	if entitlementId != roleMember {
+		// permission (role) entitlement also contains prefix `team-` which needs to be removed
+		entitlementId = strings.TrimPrefix(entitlementId, "team-")
+		roleId = pagerduty.TeamUserRole(entitlementId)
+	}
+
+	// grant team membership
+	err = t.client.AddUserToTeamWithContext(
+		ctx,
+		pagerduty.AddUserToTeamOptions{
+			TeamID: teamId,
+			UserID: principal.Id.Resource,
+			Role:   roleId,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to grant team membership or team role: %w", err)
+	}
+
+	return nil, nil
+}
+
+func (r *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	entitlement := grant.Entitlement
+	principal := grant.Principal
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"pagerduty-connector: only users can have team membership revoked",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("pagerduty-connector: only users can have team membership revoked")
+	}
+
+	teamId, _, err := extractResourceIds(entitlement.Id)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to extract team and entitlement id from entitlement id: %w", err)
+	}
+
+	// revoke team membership
+	err = r.client.RemoveUserFromTeamWithContext(
+		ctx,
+		teamId,
+		principal.Id.Resource,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to revoke team membership: %w", err)
+	}
+
+	return nil, nil
 }
 
 func teamBuilder(client *pagerduty.Client) *teamResourceType {
