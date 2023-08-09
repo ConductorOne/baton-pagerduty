@@ -193,10 +193,7 @@ func (t *teamResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 		return nil, fmt.Errorf("pagerduty-connector: only users can be granted team membership")
 	}
 
-	teamId, entitlementId, err := extractResourceIds(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to extract team and entitlement id from entitlement id: %w", err)
-	}
+	teamId, entitlementId := entitlement.Resource.Id.Resource, entitlement.Slug
 
 	var roleId pagerduty.TeamUserRole
 
@@ -207,7 +204,7 @@ func (t *teamResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 	}
 
 	// grant team membership
-	err = t.client.AddUserToTeamWithContext(
+	err := t.client.AddUserToTeamWithContext(
 		ctx,
 		pagerduty.AddUserToTeamOptions{
 			TeamID: teamId,
@@ -238,13 +235,10 @@ func (r *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 		return nil, fmt.Errorf("pagerduty-connector: only users can have team membership revoked")
 	}
 
-	teamId, _, err := extractResourceIds(entitlement.Id)
-	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to extract team and entitlement id from entitlement id: %w", err)
-	}
+	teamId := entitlement.Resource.Id.Resource
 
 	// revoke team membership
-	err = r.client.RemoveUserFromTeamWithContext(
+	err := r.client.RemoveUserFromTeamWithContext(
 		ctx,
 		teamId,
 		principal.Id.Resource,
