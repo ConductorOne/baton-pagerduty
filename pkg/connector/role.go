@@ -52,7 +52,7 @@ func (r *roleResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 
 // roleResource creates a new connector resource for a PagerDuty Role.
 func roleResource(role string, roleName string, roleType string) (*v2.Resource, error) {
-	displayName := titleCaser.String(fmt.Sprintf("%s-%s", roleType, roleName))
+	displayName := titleCase(fmt.Sprintf("%s-%s", roleType, roleName))
 	profile := map[string]interface{}{
 		"role_id":   role,
 		"role_name": displayName,

@@ -102,7 +102,7 @@ func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource
 
 	entitlementOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(resourceTypeUser),
-		ent.WithDisplayName(fmt.Sprintf("%s Team %s", resource.DisplayName, titleCaser.String(roleMember))),
+		ent.WithDisplayName(fmt.Sprintf("%s Team %s", resource.DisplayName, titleCase(roleMember))),
 		ent.WithDescription(fmt.Sprintf("Team %s role in PagerDuty", resource.DisplayName)),
 	}
 
@@ -115,8 +115,8 @@ func (t *teamResourceType) Entitlements(_ context.Context, resource *v2.Resource
 			role,
 			[]ent.EntitlementOption{
 				ent.WithGrantableTo(resourceTypeUser),
-				ent.WithDisplayName(fmt.Sprintf("%s Team Role %s", resource.DisplayName, titleCaser.String(roleName))),
-				ent.WithDescription(fmt.Sprintf("Team %s role %s in PagerDuty", resource.DisplayName, titleCaser.String(roleName))),
+				ent.WithDisplayName(fmt.Sprintf("%s Team Role %s", resource.DisplayName, titleCase(roleName))),
+				ent.WithDescription(fmt.Sprintf("Team %s role %s in PagerDuty", resource.DisplayName, titleCase(roleName))),
 			}...,
 		))
 	}
