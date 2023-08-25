@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -11,6 +12,8 @@ import (
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 const (
@@ -149,6 +152,84 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 	}
 
 	return rv, "", nil, nil
+}
+
+func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"pagerduty-connector: only users can be granted role",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("pagerduty-connector: only users can be granted role")
+	}
+
+	user, err := r.client.GetUserWithContext(
+		ctx,
+		principal.Id.Resource,
+		pagerduty.GetUserOptions{},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to get user: %w", err)
+	}
+
+	roleId := strings.TrimPrefix(entitlement.Resource.Id.Resource, "user-")
+	user.Role = roleId
+
+	// grant role membership
+	_, err = r.client.UpdateUserWithContext(
+		ctx,
+		*user,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to grant role %s: %w", roleId, err)
+	}
+
+	return nil, nil
+}
+
+func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
+	principal := grant.Principal
+	entitlement := grant.Entitlement
+
+	if principal.Id.ResourceType != resourceTypeUser.Id {
+		l.Warn(
+			"pagerduty-connector: only users can have role revoked",
+			zap.String("principal_id", principal.Id.Resource),
+			zap.String("principal_type", principal.Id.ResourceType),
+		)
+
+		return nil, fmt.Errorf("pagerduty-connector: only users can have role revoked")
+	}
+
+	user, err := r.client.GetUserWithContext(
+		ctx,
+		principal.Id.Resource,
+		pagerduty.GetUserOptions{},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to get user: %w", err)
+	}
+
+	// since user have to have at least one role, we reset it to limited_user
+	roleId := "limited_user"
+	user.Role = roleId
+
+	// revoke role
+	_, err = r.client.UpdateUserWithContext(
+		ctx,
+		*user,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("pagerduty-connector: failed to revoke role %s: %w", entitlement.Resource.Id.Resource, err)
+	}
+
+	return nil, nil
 }
 
 func roleBuilder(client *pagerduty.Client) *roleResourceType {
