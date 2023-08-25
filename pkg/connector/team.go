@@ -219,7 +219,7 @@ func (t *teamResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 	return nil, nil
 }
 
-func (r *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+func (t *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 
 	entitlement := grant.Entitlement
@@ -238,7 +238,7 @@ func (r *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 	teamId := entitlement.Resource.Id.Resource
 
 	// revoke team membership
-	err := r.client.RemoveUserFromTeamWithContext(
+	err := t.client.RemoveUserFromTeamWithContext(
 		ctx,
 		teamId,
 		principal.Id.Resource,
