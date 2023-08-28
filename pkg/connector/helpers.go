@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -12,7 +13,17 @@ import (
 
 const ResourcesPageSize = 50
 
-var titleCaser = cases.Title(language.English)
+func titleCase(s string) string {
+	titleCaser := cases.Title(language.English)
+
+	return titleCaser.String(s)
+}
+
+func annotationsForUserResourceType() annotations.Annotations {
+	annos := annotations.Annotations{}
+	annos.Update(&v2.SkipEntitlementsAndGrants{})
+	return annos
+}
 
 func handleNextPage(bag *pagination.Bag, page uint) (string, error) {
 	nextPage := strconv.FormatUint(uint64(page), 10)
