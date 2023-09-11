@@ -47,6 +47,7 @@ func userResource(ctx context.Context, user *pagerduty.User) (*v2.Resource, erro
 		[]resource.UserTraitOption{
 			resource.WithEmail(user.Email, true),
 			resource.WithUserProfile(profile),
+			resource.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
 		},
 	)
 	if err != nil {
