@@ -41,6 +41,13 @@ var (
 			v2.ResourceType_TRAIT_ROLE,
 		},
 	}
+	resourceTypeSchedule = &v2.ResourceType{
+		Id:          "schedule",
+		DisplayName: "Schedule",
+		Traits: []v2.ResourceType_Trait{
+			v2.ResourceType_TRAIT_GROUP,
+		},
+	}
 )
 
 type PagerDuty struct {
@@ -52,6 +59,7 @@ func (pd *PagerDuty) ResourceSyncers(ctx context.Context) []connectorbuilder.Res
 		teamBuilder(pd.client),
 		userBuilder(pd.client),
 		roleBuilder(pd.client),
+		scheduleBuilder(pd.client),
 	}
 }
 
