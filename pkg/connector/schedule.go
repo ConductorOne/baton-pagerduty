@@ -12,6 +12,7 @@ import (
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 )
 
 const (
@@ -32,7 +33,7 @@ func (s *scheduleResourceType) ResourceType(_ context.Context) *v2.ResourceType 
 func scheduleResource(schedule *pagerduty.Schedule) (*v2.Resource, error) {
 	displayName := titleCase(fmt.Sprintf("%s-%s", schedule.Type, schedule.Name))
 	profile := map[string]interface{}{
-		"schedule_id":   schedule,
+		"schedule_id":   schedule.ID,
 		"schedule_name": displayName,
 	}
 
@@ -47,7 +48,7 @@ func scheduleResource(schedule *pagerduty.Schedule) (*v2.Resource, error) {
 	resource, err := rs.NewGroupResource(
 		displayName,
 		resourceTypeSchedule,
-		schedule,
+		schedule.ID,
 		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
 	)
 	if err != nil {
@@ -122,6 +123,8 @@ func (s *scheduleResourceType) Entitlements(_ context.Context, resource *v2.Reso
 }
 
 func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
 	// parse resource profile to get schedule members (users or teams) and grant them the member entitlement
 	groupTrait, err := rs.GetGroupTrait(resource)
 	if err != nil {
@@ -130,12 +133,12 @@ func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource
 
 	users, ok := getProfileStringArray(groupTrait.Profile, "schedule_users")
 	if !ok {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to get schedule users")
+		l.Info("pager-duty-connector: no users found for schedule resource")
 	}
 
 	teams, ok := getProfileStringArray(groupTrait.Profile, "schedule_teams")
 	if !ok {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to get schedule teams")
+		l.Info("pager-duty-connector: no teams found for schedule resource")
 	}
 
 	var rv []*v2.Grant
