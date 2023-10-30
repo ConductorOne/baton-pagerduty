@@ -166,13 +166,17 @@ func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource
 		))
 	}
 
+	// Only UTC format is supported by PagerDuty
+	now := time.Now().UTC()
+	hourFromNow := now.Add(time.Hour)
+
 	// go through all users on call for this schedule resource and grant them the on-call entitlement
 	usersResponse, err := s.client.ListOnCallUsersWithContext(
 		ctx,
 		resource.Id.Resource,
 		pagerduty.ListOnCallUsersOptions{
-			Since: time.Now().Format(time.RFC3339),
-			Until: time.Now().Add(time.Hour).Format(time.RFC3339),
+			Since: now.Format(time.RFC3339),
+			Until: hourFromNow.Format(time.RFC3339),
 		},
 	)
 	if err != nil {
