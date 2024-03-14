@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	abilityTeams = "teams"
+
 	roleMember    = "member"
 	roleObserver  = "observer"
 	roleResponder = "responder"

@@ -58,6 +58,12 @@ func teamResource(team *pagerduty.Team) (*v2.Resource, error) {
 }
 
 func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	// check if account has the ability to work with teams
+	err := t.client.TestAbilityWithContext(ctx, abilityTeams)
+	if err != nil {
+		return nil, "", nil, nil
+	}
+
 	bag, page, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeTeam.Id})
 	if err != nil {
 		return nil, "", nil, err
