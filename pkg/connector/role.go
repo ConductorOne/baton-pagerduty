@@ -77,9 +77,7 @@ func roleResource(role string, roleName string, roleType string) (*v2.Resource, 
 func (r *roleResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	rv := make([]*v2.Resource, 0, len(userAccessRoles))
 	for roleName, role := range userAccessRoles {
-		roleCopy := role
-
-		urr, err := roleResource(roleCopy, roleName, userRole)
+		urr, err := roleResource(role, roleName, userRole)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -134,16 +132,15 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			continue
 		}
 
-		userCopy := user
-		ur, err := userResource(ctx, &userCopy)
+		uID, err := rs.NewResourceID(resourceTypeUser, user.ID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to build user resource: %w", err)
+			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to create user resource id: %w", err)
 		}
 
 		rv = append(rv, grant.NewGrant(
 			resource,
 			roleMember,
-			ur.Id,
+			uID,
 		))
 	}
 
