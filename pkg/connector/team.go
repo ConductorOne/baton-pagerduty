@@ -58,6 +58,13 @@ func teamResource(team *pagerduty.Team) (*v2.Resource, error) {
 }
 
 func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	// check if account has the ability to work with teams
+	err := t.client.TestAbilityWithContext(ctx, abilityTeams)
+	//nolint:nilerr // we want to return nil if the ability is not present
+	if err != nil {
+		return nil, "", nil, nil
+	}
+
 	bag, page, err := parsePageToken(pt.Token, &v2.ResourceId{ResourceType: resourceTypeTeam.Id})
 	if err != nil {
 		return nil, "", nil, err
@@ -80,9 +87,7 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	rv := make([]*v2.Resource, 0, len(teamsResponse.Teams))
 	for _, team := range teamsResponse.Teams {
-		teamCopy := team
-
-		tr, err := teamResource(&teamCopy)
+		tr, err := teamResource(&team) // #nosec G601
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -152,8 +157,7 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list user: %w", err)
 		}
 
-		userCopy := user
-		ur, err := userResource(ctx, userCopy)
+		uID, err := rs.NewResourceID(resourceTypeUser, user.ID)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -162,14 +166,14 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 		rv = append(rv, grant.NewGrant(
 			resource,
 			roleMember,
-			ur.Id,
+			uID,
 		))
 
 		// Create also new grant for each team role the user has
 		rv = append(rv, grant.NewGrant(
 			resource,
 			teamAccessRoles[member.Role],
-			ur.Id,
+			uID,
 		))
 	}
 

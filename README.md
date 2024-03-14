@@ -49,7 +49,9 @@ baton resources
 `baton-pagerduty` will pull down information about the following PagerDuty resources:
 
 - Users
-- Teams
+- Teams (only available for certain plans)
+- Roles
+- Schedules
 
 By default, `baton-pagerduty` will sync information only from account based on provided credential.
 
