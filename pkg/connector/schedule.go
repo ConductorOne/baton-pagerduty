@@ -81,7 +81,7 @@ func (s *scheduleResourceType) List(ctx context.Context, parentID *v2.ResourceId
 
 	var rv []*v2.Resource
 	for _, schedule := range schedulesResponse.Schedules {
-		sr, err := scheduleResource(&schedule)
+		sr, err := scheduleResource(&schedule) // #nosec G601
 		if err != nil {
 			return nil, "", nil, err
 		}

@@ -71,7 +71,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	rv := make([]*v2.Resource, 0, len(usersResponse.Users))
 	for _, user := range usersResponse.Users {
-		ur, err := userResource(&user)
+		ur, err := userResource(&user) // #nosec G601
 		if err != nil {
 			return nil, "", nil, err
 		}

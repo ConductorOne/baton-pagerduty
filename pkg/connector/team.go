@@ -60,6 +60,7 @@ func teamResource(team *pagerduty.Team) (*v2.Resource, error) {
 func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	// check if account has the ability to work with teams
 	err := t.client.TestAbilityWithContext(ctx, abilityTeams)
+	//nolint:nilerr // we want to return nil if the ability is not present
 	if err != nil {
 		return nil, "", nil, nil
 	}
@@ -86,7 +87,7 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	rv := make([]*v2.Resource, 0, len(teamsResponse.Teams))
 	for _, team := range teamsResponse.Teams {
-		tr, err := teamResource(&team)
+		tr, err := teamResource(&team) // #nosec G601
 		if err != nil {
 			return nil, "", nil, err
 		}
