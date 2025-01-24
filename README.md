@@ -71,6 +71,7 @@ Usage:
   baton-pagerduty [command]
 
 Available Commands:
+  capabilities       Get connector capabilities
   completion         Generate the autocompletion script for the specified shell
   help               Help about any command
 
@@ -81,6 +82,7 @@ Flags:
   -h, --help                   help for baton-pagerduty
       --log-format string      The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
       --log-level string       The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
+  -p, --provisioning           This must be set in order for provisioning actions to be enabled. ($BATON_PROVISIONING)
       --token string           The PagerDuty access token used to connect to the PagerDuty API. ($BATON_TOKEN)
   -v, --version                version for baton-pagerduty
 
