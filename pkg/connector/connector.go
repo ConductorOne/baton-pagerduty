@@ -94,6 +94,9 @@ func (pd *PagerDuty) Validate(ctx context.Context) (annotations.Annotations, err
 func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
 	client := pagerduty.NewClient(accessToken)
 
+	// Use a rate-limited HTTP client to handle 429 responses gracefully
+	client.HTTPClient = newRateLimitedHTTPClient()
+
 	pd := &PagerDuty{
 		client: client,
 	}
