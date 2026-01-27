@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux && (amd64 || loong64)
+//go:build linux && (amd64 || arm64 || loong64 || ppc64le || s390x || riscv64 || 386 || arm)
 
 package libc // import "modernc.org/libc"
 
 import (
 	"runtime"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -23,14 +22,14 @@ type pthreadCleanupItem struct {
 	routine, arg uintptr
 }
 
-// C version is 40 bytes.
-type pthreadMutex struct {
-	sync.Mutex            //  0	8
-	count      int32      //  8	4
-	mType      uint32     // 12	4
-	outer      sync.Mutex // 16	8
-	owner      int32      // 20	4
-	//			 24
+// C version is 40 bytes (64b) and 24 bytes (32b).
+type pthreadMutex struct { // 64b        32b
+	sync.Mutex            //  0	8    0     8
+	count      int32      //  8	4    8     4
+	mType      uint32     // 12	4   12     4
+	outer      sync.Mutex // 16	8   16     8
+	owner      int32      // 24	4   24     4
+	//			 28         28
 }
 
 type pthreadConds struct {
@@ -51,7 +50,7 @@ var (
 	conds = pthreadConds{conds: map[uintptr][]chan struct{}{}}
 )
 
-func Xpthread_setcancelstate(tls *TLS, new int32, old uintptr) int32 {
+func _pthread_setcancelstate(tls *TLS, new int32, old uintptr) int32 {
 	//TODO actually respect cancel state
 	if uint32(new) > 2 {
 		return EINVAL
@@ -186,11 +185,19 @@ func Xpthread_cleanup_push(tls *TLS, f, x uintptr) {
 	X_pthread_cleanup_push(tls, 0, f, x)
 }
 
+func __pthread_cleanup_push(tls *TLS, _, f, x uintptr) {
+	tls.pthreadCleanupItems = append(tls.pthreadCleanupItems, pthreadCleanupItem{f, x})
+}
+
 func X_pthread_cleanup_push(tls *TLS, _, f, x uintptr) {
 	tls.pthreadCleanupItems = append(tls.pthreadCleanupItems, pthreadCleanupItem{f, x})
 }
 
 func Xpthread_cleanup_pop(tls *TLS, run int32) {
+	X_pthread_cleanup_pop(tls, 0, run)
+}
+
+func __pthread_cleanup_pop(tls *TLS, _ uintptr, run int32) {
 	X_pthread_cleanup_pop(tls, 0, run)
 }
 
@@ -367,7 +374,7 @@ func Xpthread_cond_timedwait(tls *TLS, c, m, ts uintptr) (r int32) {
 	if ts != 0 {
 		deadlineSecs := (*Ttimespec)(unsafe.Pointer(ts)).Ftv_sec
 		deadlineNsecs := (*Ttimespec)(unsafe.Pointer(ts)).Ftv_nsec
-		deadline := time.Unix(deadlineSecs, deadlineNsecs)
+		deadline := time.Unix(deadlineSecs, int64(deadlineNsecs))
 		d := deadline.Sub(time.Now())
 		if d <= 0 {
 			return ETIMEDOUT
@@ -391,7 +398,7 @@ func Xpthread_cond_timedwait(tls *TLS, c, m, ts uintptr) (r int32) {
 		waiters = conds.conds[c]
 		for i, v := range waiters {
 			if v == ch {
-				conds.conds[c] = slices.Delete(waiters, i, i+1)
+				conds.conds[c] = append(waiters[:i], waiters[i+1:]...)
 				return
 			}
 		}
@@ -487,6 +494,12 @@ func Xpthread_detach(tls *TLS, t uintptr) int32 {
 // int pthread_equal(pthread_t, pthread_t);
 func Xpthread_equal(tls *TLS, t, u uintptr) int32 {
 	return Bool32(t == u)
+}
+
+// int pthread_sigmask(int how, const sigset_t *restrict set, sigset_t *restrict old)
+func _pthread_sigmask(tls *TLS, now int32, set, old uintptr) int32 {
+	// ignored
+	return 0
 }
 
 // 202402251838      all_test.go:589: files=36 buildFails=30 execFails=2 pass=4

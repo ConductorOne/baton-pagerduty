@@ -7,7 +7,6 @@ import (
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/helpers"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 )
@@ -23,7 +22,7 @@ func (u *userResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 
 // Create a new connector resource for a PagerDuty User.
 func userResource(user *pagerduty.User) (*v2.Resource, error) {
-	firstName, lastName := helpers.SplitFullName(user.Name)
+	firstName, lastName := resource.SplitFullName(user.Name)
 	profile := map[string]interface{}{
 		"first_name": firstName,
 		"last_name":  lastName,
