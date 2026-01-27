@@ -9,9 +9,16 @@ else
 OUTPUT_PATH = ${BUILD_DIR}/baton-pagerduty
 endif
 
+# Set the build tag conditionally based on ENABLE_LAMBDA
+ifdef BATON_LAMBDA_SUPPORT
+	BUILD_TAGS=-tags baton_lambda_support
+else
+	BUILD_TAGS=
+endif
+
 .PHONY: build
 build: $(GENERATED_CONF)
-	go build -o ${OUTPUT_PATH} ./cmd/baton-pagerduty
+	go build ${BUILD_TAGS} -o ${OUTPUT_PATH} ./cmd/baton-pagerduty
 
 $(GENERATED_CONF): pkg/config/config.go go.mod
 	@echo "Generating $(GENERATED_CONF)..."
