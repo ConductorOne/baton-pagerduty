@@ -5,6 +5,7 @@ import "reflect"
 
 type Pagerduty struct {
 	Token string `mapstructure:"token"`
+	BaseUrl string `mapstructure:"base-url"`
 }
 
 func (c *Pagerduty) findFieldByTag(tagValue string) (any, bool) {

@@ -11,6 +11,12 @@ var (
 		field.WithRequired(true),
 		field.WithIsSecret(true),
 	)
+	BaseURL = field.StringField(
+		"base-url",
+		field.WithDescription("Override the PagerDuty API URL (for testing)"),
+		field.WithHidden(true),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
+	)
 
 	// FieldRelationships defines relationships between the fields listed in
 	// Config that can be automatically validated.
@@ -21,6 +27,7 @@ var (
 var Config = field.NewConfiguration(
 	[]field.SchemaField{
 		Token,
+		BaseURL,
 	},
 	field.WithConnectorDisplayName("PagerDuty"),
 	field.WithHelpUrl("/docs/baton/pagerduty"),

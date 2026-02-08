@@ -47,7 +47,7 @@ func getConnector(ctx context.Context, cc *cfg.Pagerduty) (types.ConnectorServer
 		return nil, err
 	}
 
-	cb, err := connector.New(ctx, cc.Token)
+	cb, err := connector.New(ctx, cc.Token, cc.BaseUrl)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

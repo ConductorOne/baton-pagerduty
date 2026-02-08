@@ -151,8 +151,12 @@ func (pd *PagerDuty) Validate(ctx context.Context) (annotations.Annotations, err
 }
 
 // New returns the PagerDuty connector.
-func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
-	client := pagerduty.NewClient(accessToken)
+func New(ctx context.Context, accessToken string, baseURL string) (*PagerDuty, error) {
+	var opts []pagerduty.ClientOptions
+	if baseURL != "" {
+		opts = append(opts, pagerduty.WithAPIEndpoint(baseURL))
+	}
+	client := pagerduty.NewClient(accessToken, opts...)
 
 	pd := &PagerDuty{
 		client: client,
