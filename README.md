@@ -1,6 +1,6 @@
 ![Baton Logo](./docs/images/baton-logo.png)
 
-# `baton-pagerduty` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-pagerduty.svg)](https://pkg.go.dev/github.com/conductorone/baton-pagerduty) ![main ci](https://github.com/conductorone/baton-pagerduty/actions/workflows/main.yaml/badge.svg)
+# `baton-pagerduty` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-pagerduty.svg)](https://pkg.go.dev/github.com/conductorone/baton-pagerduty) ![verify](https://github.com/conductorone/baton-pagerduty/actions/workflows/verify.yaml/badge.svg)
 
 `baton-pagerduty` is a connector for PagerDuty built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the PagerDuty User provisioning API to sync data about teams, users and their roles.
 
@@ -12,7 +12,7 @@ To work with the connector, you need to obtain API access token from PagerDuty. 
 
 There are two ways to obtain an API key:
 - Create token by going to the top menu bar, selecting `Integrations` -> `API Access Keys` or
-- Create user-scoped token by hovering over the profile icon in the top right corner and choosing `My Profile` -> `User Settings` -> `Create API User Token` 
+- Create user-scoped token by hovering over the profile icon in the top right corner and choosing `My Profile` -> `User Settings` -> `Create API User Token`
 
 Be aware that to sync all the users, teams and roles associated with them with user-scoped token, you can't have restricted access role for that user.
 
