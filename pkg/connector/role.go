@@ -121,7 +121,7 @@ func (r *roleResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	usersResponse, err := r.client.ListUsersWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list users: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list users", err)
 	}
 
 	var rv []*v2.Grant
@@ -170,7 +170,7 @@ func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 		pagerduty.GetUserOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to get user: %w", err)
+		return nil, wrapPagerDutyError("failed to get user", err)
 	}
 
 	roleId := strings.TrimPrefix(entitlement.Resource.Id.Resource, "user-")
@@ -182,7 +182,7 @@ func (r *roleResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 		*user,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to grant role %s: %w", roleId, err)
+		return nil, wrapPagerDutyError(fmt.Sprintf("failed to grant role %s", roleId), err)
 	}
 
 	return nil, nil
@@ -210,7 +210,7 @@ func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 		pagerduty.GetUserOptions{},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to get user: %w", err)
+		return nil, wrapPagerDutyError("failed to get user", err)
 	}
 
 	// since user have to have at least one role, we reset it to limited_user
@@ -223,7 +223,7 @@ func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 		*user,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to revoke role %s: %w", entitlement.Resource.Id.Resource, err)
+		return nil, wrapPagerDutyError(fmt.Sprintf("failed to revoke role %s", entitlement.Resource.Id.Resource), err)
 	}
 
 	return nil, nil
