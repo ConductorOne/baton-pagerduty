@@ -139,6 +139,9 @@ func (u *userResourceType) CreateAccount(
 			return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: missing email in account info")
 		}
 	}
+	if emailStr == "" {
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: email cannot be empty")
+	}
 
 	// Extract name - required field
 	name, ok := pMap["name"]
@@ -192,13 +195,13 @@ func (u *userResourceType) CreateAccount(
 	}
 
 	// Create resource from created user
-	resource, err := userResource(createdUser)
+	userRes, err := userResource(createdUser)
 	if err != nil {
 		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: failed to create user resource: %w", err)
 	}
 
 	car := &v2.CreateAccountResponse_SuccessResult{
-		Resource: resource,
+		Resource: userRes,
 	}
 
 	return car, nil, outputAnnotations, nil
