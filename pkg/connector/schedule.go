@@ -76,7 +76,7 @@ func (s *scheduleResourceType) List(ctx context.Context, parentID *v2.ResourceId
 
 	schedulesResponse, err := s.client.ListSchedulesWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list schedules: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list schedules", err)
 	}
 
 	var rv []*v2.Resource
@@ -181,7 +181,7 @@ func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource
 		},
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list on-call users: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list on-call users", err)
 	}
 
 	for _, user := range usersResponse {

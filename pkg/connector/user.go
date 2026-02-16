@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -65,7 +64,7 @@ func (u *userResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	usersResponse, err := u.client.ListUsersWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list users: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list users", err)
 	}
 
 	rv := make([]*v2.Resource, 0, len(usersResponse.Users))

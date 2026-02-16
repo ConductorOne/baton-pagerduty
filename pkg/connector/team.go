@@ -82,7 +82,7 @@ func (t *teamResourceType) List(ctx context.Context, parentID *v2.ResourceId, pt
 
 	teamsResponse, err := t.client.ListTeamsWithContext(ctx, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list teams: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list teams", err)
 	}
 
 	rv := make([]*v2.Resource, 0, len(teamsResponse.Teams))
@@ -147,14 +147,14 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	teamMembersResponse, err := t.client.ListTeamMembers(ctx, resource.Id.Resource, paginationOpts)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list team members: %w", err)
+		return nil, "", nil, wrapPagerDutyError("failed to list team members", err)
 	}
 
 	var rv []*v2.Grant
 	for _, member := range teamMembersResponse.Members {
 		user, err := t.client.GetUserWithContext(ctx, member.User.ID, pagerduty.GetUserOptions{})
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("pagerduty-connector: failed to list user: %w", err)
+			return nil, "", nil, wrapPagerDutyError("failed to get user", err)
 		}
 
 		uID, err := rs.NewResourceID(resourceTypeUser, user.ID)
@@ -217,7 +217,7 @@ func (t *teamResourceType) Grant(ctx context.Context, principal *v2.Resource, en
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to grant team membership or team role: %w", err)
+		return nil, wrapPagerDutyError("failed to grant team membership or team role", err)
 	}
 
 	return nil, nil
@@ -248,7 +248,7 @@ func (t *teamResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 		principal.Id.Resource,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("pagerduty-connector: failed to revoke team membership: %w", err)
+		return nil, wrapPagerDutyError("failed to revoke team membership", err)
 	}
 
 	return nil, nil
