@@ -129,28 +129,28 @@ func (u *userResourceType) CreateAccount(
 	if ok {
 		emailStr, ok = email.(string)
 		if !ok {
-			return nil, nil, outputAnnotations, fmt.Errorf("email must be a string")
+			return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: email must be a string")
 		}
 	} else {
 		// Try to get email from accountInfo.Emails if available
 		if len(accountInfo.Emails) > 0 {
 			emailStr = accountInfo.Emails[0].Address
 		} else {
-			return nil, nil, outputAnnotations, fmt.Errorf("missing email in account info")
+			return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: missing email in account info")
 		}
 	}
 
 	// Extract name - required field
 	name, ok := pMap["name"]
 	if !ok {
-		return nil, nil, outputAnnotations, fmt.Errorf("missing name in account info")
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: missing name in account info")
 	}
 	nameStr, ok := name.(string)
 	if !ok {
-		return nil, nil, outputAnnotations, fmt.Errorf("name must be a string")
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: name must be a string")
 	}
 	if nameStr == "" {
-		return nil, nil, outputAnnotations, fmt.Errorf("name cannot be empty")
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: name cannot be empty")
 	}
 
 	// Extract role (optional, defaults to user)
@@ -160,7 +160,7 @@ func (u *userResourceType) CreateAccount(
 	}
 	roleStr, ok := role.(string)
 	if !ok {
-		return nil, nil, outputAnnotations, fmt.Errorf("role must be a string")
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: role must be a string")
 	}
 
 	// Extract job_title (optional)
@@ -187,18 +187,18 @@ func (u *userResourceType) CreateAccount(
 	// Create user in PagerDuty
 	createdUser, err := u.client.CreateUserWithContext(ctx, user)
 	if err != nil {
-		l.Error("pagerduty-connector: failed to create user", zap.Error(err), zap.String("email", emailStr))
-		return nil, nil, outputAnnotations, fmt.Errorf("failed to create user: %w", err)
+		l.Error("pagerduty-connector: failed to create user", zap.Error(err))
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: failed to create user: %w", err)
 	}
 
 	// Create resource from created user
-	userResource, err := userResource(createdUser)
+	resource, err := userResource(createdUser)
 	if err != nil {
-		return nil, nil, outputAnnotations, fmt.Errorf("failed to create user resource: %w", err)
+		return nil, nil, outputAnnotations, fmt.Errorf("pagerduty-connector: failed to create user resource: %w", err)
 	}
 
 	car := &v2.CreateAccountResponse_SuccessResult{
-		Resource: userResource,
+		Resource: resource,
 	}
 
 	return car, nil, outputAnnotations, nil
@@ -208,7 +208,7 @@ func (u *userResourceType) CreateAccount(
 func (u *userResourceType) Delete(ctx context.Context, resourceId *v2.ResourceId, parentResourceID *v2.ResourceId) (annotations.Annotations, error) {
 	userID := resourceId.GetResource()
 	if len(userID) == 0 {
-		return nil, fmt.Errorf("missing resource ID")
+		return nil, fmt.Errorf("pagerduty-connector: missing resource ID")
 	}
 
 	l := ctxzap.Extract(ctx).With(zap.String("userID", userID))
@@ -218,7 +218,7 @@ func (u *userResourceType) Delete(ctx context.Context, resourceId *v2.ResourceId
 	err := u.client.DeleteUserWithContext(ctx, userID)
 	if err != nil {
 		l.Error("pagerduty-connector: delete-user: failed to delete user", zap.Error(err))
-		return outputAnnotations, fmt.Errorf("failed to delete user: %w", err)
+		return outputAnnotations, fmt.Errorf("pagerduty-connector: failed to delete user: %w", err)
 	}
 
 	return outputAnnotations, nil
