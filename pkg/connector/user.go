@@ -6,8 +6,11 @@ import (
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 type userResourceType struct {
@@ -90,6 +93,135 @@ func (u *userResourceType) Entitlements(_ context.Context, _ *v2.Resource, _ *pa
 
 func (u *userResourceType) Grants(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
+}
+
+// CreateAccountCapabilityDetails returns the account provisioning capability details.
+// PagerDuty does not require passwords for user creation.
+func (u *userResourceType) CreateAccountCapabilityDetails(_ context.Context) (*v2.CredentialDetailsAccountProvisioning, annotations.Annotations, error) {
+	return &v2.CredentialDetailsAccountProvisioning{
+		SupportedCredentialOptions: []v2.CapabilityDetailCredentialOption{
+			v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_NO_PASSWORD,
+		},
+		PreferredCredentialOption: v2.CapabilityDetailCredentialOption_CAPABILITY_DETAIL_CREDENTIAL_OPTION_NO_PASSWORD,
+	}, nil, nil
+}
+
+// CreateAccount creates a new user account in PagerDuty.
+func (u *userResourceType) CreateAccount(
+	ctx context.Context,
+	accountInfo *v2.AccountInfo,
+	credentialOptions *v2.LocalCredentialOptions,
+) (
+	connectorbuilder.CreateAccountResponse,
+	[]*v2.PlaintextData,
+	annotations.Annotations,
+	error,
+) {
+	l := ctxzap.Extract(ctx)
+	outputAnnotations := annotations.New()
+
+	// Extract account information
+	pMap := accountInfo.Profile.AsMap()
+
+	// Extract email - required field
+	var emailStr string
+	email, ok := pMap["email"]
+	if ok {
+		emailStr, ok = email.(string)
+		if !ok {
+			return nil, nil, outputAnnotations, fmt.Errorf("email must be a string")
+		}
+	} else {
+		// Try to get email from accountInfo.Emails if available
+		if len(accountInfo.Emails) > 0 {
+			emailStr = accountInfo.Emails[0].Address
+		} else {
+			return nil, nil, outputAnnotations, fmt.Errorf("missing email in account info")
+		}
+	}
+
+	// Extract name - required field
+	name, ok := pMap["name"]
+	if !ok {
+		return nil, nil, outputAnnotations, fmt.Errorf("missing name in account info")
+	}
+	nameStr, ok := name.(string)
+	if !ok {
+		return nil, nil, outputAnnotations, fmt.Errorf("name must be a string")
+	}
+	if nameStr == "" {
+		return nil, nil, outputAnnotations, fmt.Errorf("name cannot be empty")
+	}
+
+	// Extract role (optional, defaults to user)
+	role, ok := pMap["role"]
+	if !ok {
+		role = "user"
+	}
+	roleStr, ok := role.(string)
+	if !ok {
+		return nil, nil, outputAnnotations, fmt.Errorf("role must be a string")
+	}
+
+	// Extract job_title (optional)
+	var jobTitleStr string
+	if jobTitle, ok := pMap["job_title"]; ok {
+		jobTitleStr, _ = jobTitle.(string)
+	}
+
+	// Extract timezone (optional)
+	var timezoneStr string
+	if timezone, ok := pMap["timezone"]; ok {
+		timezoneStr, _ = timezone.(string)
+	}
+
+	// Create user object
+	user := pagerduty.User{
+		Name:     nameStr,
+		Email:    emailStr,
+		Role:     roleStr,
+		JobTitle: jobTitleStr,
+		Timezone: timezoneStr,
+	}
+
+	// Create user in PagerDuty
+	createdUser, err := u.client.CreateUserWithContext(ctx, user)
+	if err != nil {
+		l.Error("pagerduty-connector: failed to create user", zap.Error(err), zap.String("email", emailStr))
+		return nil, nil, outputAnnotations, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Create resource from created user
+	userResource, err := userResource(createdUser)
+	if err != nil {
+		return nil, nil, outputAnnotations, fmt.Errorf("failed to create user resource: %w", err)
+	}
+
+	car := &v2.CreateAccountResponse_SuccessResult{
+		Resource: userResource,
+	}
+
+	return car, nil, outputAnnotations, nil
+}
+
+// Delete implements the ResourceDeleterV2 interface - deletes a user from PagerDuty.
+func (u *userResourceType) Delete(ctx context.Context, resourceId *v2.ResourceId, parentResourceID *v2.ResourceId) (annotations.Annotations, error) {
+	userID := resourceId.GetResource()
+	if len(userID) == 0 {
+		return nil, fmt.Errorf("missing resource ID")
+	}
+
+	l := ctxzap.Extract(ctx).With(zap.String("userID", userID))
+	outputAnnotations := annotations.New()
+
+	// Delete the user
+	err := u.client.DeleteUserWithContext(ctx, userID)
+	if err != nil {
+		l.Error("pagerduty-connector: delete-user: failed to delete user", zap.Error(err))
+		return outputAnnotations, fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return outputAnnotations, nil
 }
 
 func userBuilder(client *pagerduty.Client) *userResourceType {

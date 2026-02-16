@@ -70,6 +70,65 @@ func (pd *PagerDuty) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error
 	return &v2.ConnectorMetadata{
 		DisplayName: "PagerDuty",
 		Description: "Connector syncing PagerDuty users, teams, and their roles to Baton",
+		AccountCreationSchema: &v2.ConnectorAccountCreationSchema{
+			FieldMap: map[string]*v2.ConnectorAccountCreationSchema_Field{
+				"email": {
+					DisplayName: "Email",
+					Required:    true,
+					Description: "The email address of the user to create",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "john.doe@example.com",
+					Order:       1,
+				},
+				"name": {
+					DisplayName: "Name",
+					Required:    true,
+					Description: "The full name of the user",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "John Doe",
+					Order:       2,
+				},
+				"role": {
+					DisplayName: "Role",
+					Required:    false,
+					Description: "The role to assign to the user. Valid roles: admin, limited_user, observer, owner, " +
+						"read_only_user, restricted_access, read_only_limited_user, user. " +
+						"Note: read_only_user/read_only_limited_user require read_only_users ability; " +
+						"observer/restricted_access require advanced permissions. Defaults to user",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: v2.ConnectorAccountCreationSchema_StringField_builder{
+							DefaultValue: stringPtr("user"),
+						}.Build(),
+					},
+					Placeholder: "user",
+					Order:       3,
+				},
+				"job_title": {
+					DisplayName: "Job Title",
+					Required:    false,
+					Description: "The job title of the user",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "Software Engineer",
+					Order:       4,
+				},
+				"timezone": {
+					DisplayName: "Timezone",
+					Required:    false,
+					Description: "The timezone of the user (e.g., America/New_York)",
+					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
+						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
+					},
+					Placeholder: "America/New_York",
+					Order:       5,
+				},
+			},
+		},
 	}, nil
 }
 
@@ -99,4 +158,9 @@ func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
 	}
 
 	return pd, nil
+}
+
+// stringPtr returns a pointer to the given string.
+func stringPtr(s string) *string {
+	return &s
 }
