@@ -120,11 +120,12 @@ func (pd *PagerDuty) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error
 				"timezone": {
 					DisplayName: "Timezone",
 					Required:    false,
-					Description: "The timezone of the user (e.g., America/New_York)",
+					Description: "The timezone of the user. Must be a valid PagerDuty timezone name " +
+						"(ActiveSupport::TimeZone format, e.g., \"Eastern Time (US & Canada)\", \"UTC\")",
 					Field: &v2.ConnectorAccountCreationSchema_Field_StringField{
 						StringField: &v2.ConnectorAccountCreationSchema_StringField{},
 					},
-					Placeholder: "America/New_York",
+					Placeholder: "Eastern Time (US & Canada)",
 					Order:       5,
 				},
 			},
