@@ -15,6 +15,8 @@ import (
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // TODO: Add support for advanced permissions (Team roles, object roles)
@@ -260,6 +262,13 @@ func (r *roleResourceType) Revoke(ctx context.Context, grant *v2.Grant) (annotat
 	if user.Role == limitedUserRoleId {
 		// Users must have a role, and limited_user is the lowest level of permissions, so it cannot be revoked.
 		return annotations.New(&v2.GrantAlreadyRevoked{}), nil
+	}
+
+	// Return a grpc status of NotFound if the user doesn't have the role.
+	// We don't return GrantAlreadyRevoked because the user's current role might have more permissions than the role being revoked.
+	// All we know is that we were asked to revoke a role that the user doesn't have.
+	if user.Role != roleId {
+		return nil, status.Errorf(codes.NotFound, "pagerduty-connector: user %s does not have role %s", user.ID, roleId)
 	}
 
 	// Since PagerDuty users must have at least one role, we reset it to limited_user.
