@@ -8,6 +8,7 @@ import (
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
@@ -32,6 +33,8 @@ type teamResourceType struct {
 	resourceType *v2.ResourceType
 	client       *pagerduty.Client
 }
+
+var _ connectorbuilder.ResourceProvisioner = &teamResourceType{}
 
 func (t *teamResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 	return t.resourceType

@@ -24,11 +24,11 @@ jobs:
         uses: ConductorOne/github-workflows/actions/sync-test@v4
         with:
           connector: './baton-pagerduty'
-          baton-entitlement: 'role:user-observer:member'
+          baton-entitlement: 'role:user-user:member'
           baton-principal: 'PFSMLDZ'
       - name: Test account provisioning
         uses: ConductorOne/github-workflows/actions/account-provisioning@v4
         with:
           connector: './baton-pagerduty'
           account-email: 'baton-ci-test@conductorone.com'
-          account-profile: '{"name": "Baton CI Test User"}'
+          account-profile: '{"name": "Baton CI Test User", "role": "limited_user"}'
