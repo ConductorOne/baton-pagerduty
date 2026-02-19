@@ -103,5 +103,8 @@
         }
       }
     }
-  ]
+  ],
+  "displayName": "PagerDuty",
+  "helpUrl": "/docs/baton/pagerduty",
+  "iconUrl": "/static/app-icons/pagerduty.svg"
 }
