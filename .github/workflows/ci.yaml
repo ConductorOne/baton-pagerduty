@@ -56,7 +56,7 @@ jobs:
       - name: Build baton-pagerduty
         run: go build -o baton-pagerduty ./cmd/baton-pagerduty
       - name: Test account provisioning
-        uses: ConductorOne/github-workflows/actions/account-provisioning@v2
+        uses: ConductorOne/github-workflows/actions/account-provisioning@v4
         with:
           connector: './baton-pagerduty'
           account-email: 'baton-ci-test@example.com'
