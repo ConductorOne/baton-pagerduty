@@ -29,18 +29,18 @@ const (
 const (
 	userRoleOwner      = "user-owner"
 	userRoleAdmin      = "user-admin"
+	userRoleUser       = "user-user"
 	userRoleObserver   = "user-observer"
 	userRoleResponder  = "user-limited_user"
-	userRoleManager    = "user-manager"
 	userRoleRestricted = "user-restricted_access"
 )
 
 var userAccessRoles = map[string]string{
 	roleOwner:      userRoleOwner,
 	roleAdmin:      userRoleAdmin,
+	userRole:       userRoleUser,
 	roleObserver:   userRoleObserver,
 	roleResponder:  userRoleResponder,
-	roleManager:    userRoleManager,
 	roleRestricted: userRoleRestricted,
 }
 
