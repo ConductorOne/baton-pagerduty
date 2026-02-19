@@ -17,6 +17,10 @@ type userResourceType struct {
 	client       *pagerduty.Client
 }
 
+var _ connectorbuilder.ResourceSyncerLimited = &userResourceType{}
+var _ connectorbuilder.AccountManagerLimited = &userResourceType{}
+var _ connectorbuilder.ResourceDeleterV2Limited = &userResourceType{}
+
 func (u *userResourceType) ResourceType(_ context.Context) *v2.ResourceType {
 	return u.resourceType
 }
