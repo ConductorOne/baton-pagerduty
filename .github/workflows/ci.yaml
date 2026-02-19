@@ -1,0 +1,63 @@
+name: ci
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
+
+jobs:
+  go-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          args: --timeout=3m
+
+  go-test:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: go tests
+        run: go test -v -covermode=count -json ./... > test.json
+      - name: annotate go tests
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.5.1
+        with:
+          test-results: test.json
+
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      BATON_TOKEN: ${{ secrets.BATON_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Build baton-pagerduty
+        run: go build -o baton-pagerduty ./cmd/baton-pagerduty
+      - name: Test account provisioning
+        uses: ConductorOne/github-workflows/actions/account-provisioning@v2
+        with:
+          connector: './baton-pagerduty'
+          account-email: 'baton-ci-test@example.com'
+          account-profile: '{"name": "Baton CI Test User"}'
