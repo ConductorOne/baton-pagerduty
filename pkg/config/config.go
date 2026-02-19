@@ -18,9 +18,14 @@ var (
 )
 
 //go:generate go run ./gen
-var Config = field.NewConfiguration([]field.SchemaField{
-	Token,
-})
+var Config = field.NewConfiguration(
+	[]field.SchemaField{
+		Token,
+	},
+	field.WithConnectorDisplayName("PagerDuty"),
+	field.WithHelpUrl("/docs/baton/pagerduty"),
+	field.WithIconUrl("/static/app-icons/pagerduty.svg"),
+)
 
 // ValidateConfig is run after the configuration is loaded, and should return an
 // error if it isn't valid. Implementing this function is optional, it only
