@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/PagerDuty/go-pagerduty"
@@ -179,6 +180,10 @@ func (u *userResourceType) Delete(ctx context.Context, resourceId *v2.ResourceId
 	userID := resourceId.GetResource()
 	err := u.client.DeleteUserWithContext(ctx, userID)
 	if err != nil {
+		var apiErr pagerduty.APIError
+		if errors.As(err, &apiErr) && apiErr.NotFound() {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("pagerduty-connector: failed to delete user: %w", err)
 	}
 	return nil, nil
