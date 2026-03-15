@@ -155,12 +155,9 @@ func (t *teamResourceType) Grants(ctx context.Context, resource *v2.Resource, pT
 
 	var rv []*v2.Grant
 	for _, member := range teamMembersResponse.Members {
-		user, err := t.client.GetUserWithContext(ctx, member.User.ID, pagerduty.GetUserOptions{})
-		if err != nil {
-			return nil, "", nil, wrapPagerDutyError("failed to get user", err)
-		}
-
-		uID, err := rs.NewResourceID(resourceTypeUser, user.ID)
+		// Use member.User.ID directly — ListTeamMembers already returns
+		// the user ID and role, so the per-member GetUser re-fetch was N+1 waste.
+		uID, err := rs.NewResourceID(resourceTypeUser, member.User.ID)
 		if err != nil {
 			return nil, "", nil, err
 		}
