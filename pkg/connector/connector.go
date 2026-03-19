@@ -2,6 +2,8 @@ package connector
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -151,8 +153,20 @@ func (pd *PagerDuty) Validate(ctx context.Context) (annotations.Annotations, err
 }
 
 // New returns the PagerDuty connector.
-func New(ctx context.Context, accessToken string) (*PagerDuty, error) {
-	client := pagerduty.NewClient(accessToken)
+func New(ctx context.Context, accessToken string, baseURL string, insecure bool) (*PagerDuty, error) {
+	var opts []pagerduty.ClientOptions
+	if baseURL != "" {
+		opts = append(opts, pagerduty.WithAPIEndpoint(baseURL))
+	}
+	client := pagerduty.NewClient(accessToken, opts...)
+
+	if insecure {
+		client.HTTPClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // G402: intentional for testing with self-signed certs
+			},
+		}
+	}
 
 	pd := &PagerDuty{
 		client: client,
