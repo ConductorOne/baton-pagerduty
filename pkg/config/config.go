@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
+
 	"github.com/conductorone/baton-sdk/pkg/field"
 )
 
@@ -17,6 +20,13 @@ var (
 		field.WithHidden(true),
 		field.WithExportTarget(field.ExportTargetCLIOnly),
 	)
+	Insecure = field.BoolField(
+		"insecure",
+		field.WithDescription("Allow insecure TLS connections (for testing with self-signed certificates)"),
+		field.WithDefaultValue(false),
+		field.WithHidden(true),
+		field.WithExportTarget(field.ExportTargetCLIOnly),
+	)
 
 	// FieldRelationships defines relationships between the fields listed in
 	// Config that can be automatically validated.
@@ -28,6 +38,7 @@ var Config = field.NewConfiguration(
 	[]field.SchemaField{
 		Token,
 		BaseURL,
+		Insecure,
 	},
 	field.WithConnectorDisplayName("PagerDuty"),
 	field.WithHelpUrl("/docs/baton/pagerduty"),
@@ -39,5 +50,14 @@ var Config = field.NewConfiguration(
 // needs to perform extra validations that cannot be encoded with configuration
 // parameters.
 func ValidateConfig(cfg *Pagerduty) error {
+	if cfg.BaseUrl != "" {
+		u, err := url.Parse(cfg.BaseUrl)
+		if err != nil {
+			return fmt.Errorf("invalid base-url: %w", err)
+		}
+		if u.Scheme != "http" && u.Scheme != "https" {
+			return fmt.Errorf("base-url must have http or https scheme, got %q", u.Scheme)
+		}
+	}
 	return nil
 }
