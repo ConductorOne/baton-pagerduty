@@ -52,7 +52,8 @@ func scheduleResource(schedule *pagerduty.Schedule) (*v2.Resource, error) {
 		displayName,
 		resourceTypeSchedule,
 		schedule.ID,
-		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
+		[]rs.GroupTraitOption{},
+		rs.WithResourceProfile(profile),
 	)
 	if err != nil {
 		return nil, err
@@ -127,17 +128,13 @@ func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource
 	l := ctxzap.Extract(ctx)
 
 	// parse resource profile to get schedule members (users or teams) and grant them the member entitlement
-	groupTrait, err := rs.GetGroupTrait(resource)
-	if err != nil {
-		return nil, "", nil, err
-	}
 
-	users, ok := getProfileStringArray(groupTrait.Profile, "schedule_users")
+	users, ok := getProfileStringArray(rs.GetProfile(resource), "schedule_users")
 	if !ok {
 		l.Info("pager-duty-connector: no users found for schedule resource")
 	}
 
-	teams, ok := getProfileStringArray(groupTrait.Profile, "schedule_teams")
+	teams, ok := getProfileStringArray(rs.GetProfile(resource), "schedule_teams")
 	if !ok {
 		l.Info("pager-duty-connector: no teams found for schedule resource")
 	}
