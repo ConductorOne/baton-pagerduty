@@ -71,7 +71,8 @@ func roleResource(roleId string, roleName string, roleType string) (*v2.Resource
 		displayName,
 		resourceTypeRole,
 		roleResourceId,
-		[]rs.RoleTraitOption{rs.WithRoleProfile(profile)},
+		[]rs.RoleTraitOption{},
+		rs.WithResourceProfile(profile),
 	)
 	if err != nil {
 		return nil, err

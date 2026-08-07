@@ -51,7 +51,8 @@ func teamResource(team *pagerduty.Team) (*v2.Resource, error) {
 		team.Name,
 		resourceTypeTeam,
 		team.ID,
-		[]rs.GroupTraitOption{rs.WithGroupProfile(profile)},
+		[]rs.GroupTraitOption{},
+		rs.WithResourceProfile(profile),
 	)
 	if err != nil {
 		return nil, err
