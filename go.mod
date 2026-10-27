@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/PagerDuty/go-pagerduty v1.8.0
-	github.com/conductorone/baton-sdk v0.42.4
+	github.com/conductorone/baton-sdk v0.42.5
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23
