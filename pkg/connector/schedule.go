@@ -14,6 +14,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 const (
@@ -181,6 +182,17 @@ func (s *scheduleResourceType) Grants(ctx context.Context, resource *v2.Resource
 		},
 	)
 	if err != nil {
+		// ListOnCallUsersWithContext issues GET /schedules/{id}/users — a
+		// single-object GET for THIS schedule, with no second object the 404
+		// could be about. A 404 here therefore necessarily means the schedule
+		// itself was deleted or is unresolvable mid-sync; that is absence, not
+		// a transient failure. See notFoundOnItem for the vendor 404 semantics
+		// (HTTP 404 / API code 2100 are skippable; 403 permission denial is not).
+		if notFoundOnItem(err) {
+			l.Debug("pagerduty-connector: schedule not found mid-sync; skipping on-call grants",
+				zap.String("schedule_id", resource.Id.Resource))
+			return rv, "", nil, nil
+		}
 		return nil, "", nil, wrapPagerDutyError("failed to list on-call users", err)
 	}
 

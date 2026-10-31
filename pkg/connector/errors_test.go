@@ -1,6 +1,7 @@
 package connector
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,5 +39,71 @@ func TestWrapPagerDutyError_RateLimit(t *testing.T) {
 	}
 	if st.Code() != codes.Unavailable {
 		t.Errorf("rate limit: got gRPC code %v, want %v", st.Code(), codes.Unavailable)
+	}
+}
+
+func TestNotFoundOnItem(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       bool
+	}{
+		{
+			name:       "http 404 schedule not found",
+			statusCode: http.StatusNotFound,
+			body:       `{"error":{"code":2001,"message":"Not Found","errors":["Schedule Not Found"]}}`,
+			want:       true,
+		},
+		{
+			name:       "api code 2100 schedule not found",
+			statusCode: http.StatusNotFound,
+			body:       `{"error":{"code":2100,"message":"Not Found","errors":["Schedule Not Found"]}}`,
+			want:       true,
+		},
+		{
+			name:       "403 forbidden is not skippable",
+			statusCode: http.StatusForbidden,
+			body:       `{"error":{"code":2003,"message":"Forbidden","errors":["You are not allowed to access this resource"]}}`,
+			want:       false,
+		},
+		{
+			name:       "429 rate limited is not skippable",
+			statusCode: http.StatusTooManyRequests,
+			body:       `{"error":{"code":2020,"message":"Rate Limit Exceeded","errors":["Too many requests"]}}`,
+			want:       false,
+		},
+		{
+			name:       "500 is not skippable",
+			statusCode: http.StatusInternalServerError,
+			body:       `{"error":{"code":5000,"message":"Internal Server Error","errors":["Something went wrong"]}}`,
+			want:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := newMockServer(t, tt.statusCode, tt.body)
+			defer srv.Close()
+
+			client := pagerduty.NewClient("fake-token", pagerduty.WithAPIEndpoint(srv.URL))
+			_, err := client.ListUsersWithContext(t.Context(), pagerduty.ListUsersOptions{})
+			if err == nil {
+				t.Fatal("expected error from mock server, got nil")
+			}
+
+			if got := notFoundOnItem(err); got != tt.want {
+				t.Errorf("notFoundOnItem() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	// non-APIError errors are not skippable
+	if got := notFoundOnItem(context.Canceled); got != false {
+		t.Errorf("notFoundOnItem(context.Canceled) = %v, want false", got)
+	}
+	// nil is not skippable
+	if got := notFoundOnItem(nil); got != false {
+		t.Errorf("notFoundOnItem(nil) = %v, want false", got)
 	}
 }
