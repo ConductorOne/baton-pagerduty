@@ -62,6 +62,16 @@ func TestNotFoundOnItem(t *testing.T) {
 			want:       true,
 		},
 		{
+			// Isolates the vendor's code==2100 arm of APIError.NotFound():
+			// a well-formed error body with code 2100 is "not found" even
+			// when the HTTP status itself is not 404 (APIError.Valid is set
+			// on any parsed error body).
+			name:       "api code 2100 with non-404 status still matches code arm",
+			statusCode: http.StatusBadRequest,
+			body:       `{"error":{"code":2100,"message":"Not Found","errors":["Schedule Not Found"]}}`,
+			want:       true,
+		},
+		{
 			name:       "403 forbidden is not skippable",
 			statusCode: http.StatusForbidden,
 			body:       `{"error":{"code":2003,"message":"Forbidden","errors":["You are not allowed to access this resource"]}}`,

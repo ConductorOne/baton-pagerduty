@@ -2,14 +2,19 @@ package connector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/PagerDuty/go-pagerduty"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
+	ctxzap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,6 +23,47 @@ import (
 // Note: a schedule whose profile carries no schedule_users/schedule_teams
 // returning an empty rv on 404 is profile truth (no member grants were
 // derivable from the profile), not a swallowed error.
+
+// memSyncer is a zapcore.WriteSyncer that records each encoded log line so a
+// test can assert the level and message of what the connector actually logged.
+type memSyncer struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (m *memSyncer) Write(p []byte) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lines = append(m.lines, string(p))
+	return len(p), nil
+}
+
+func (m *memSyncer) Sync() error { return nil }
+
+// loggedEntries decodes the recorded JSON lines into (level, message) pairs.
+func (m *memSyncer) loggedEntries(t *testing.T) []struct{ Level, Message string } {
+	t.Helper()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]struct{ Level, Message string }, 0, len(m.lines))
+	for _, line := range m.lines {
+		var e struct {
+			Level   string `json:"level"`
+			Message string `json:"msg"`
+		}
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			t.Fatalf("unparseable log line %q: %v", line, err)
+		}
+		out = append(out, struct{ Level, Message string }{e.Level, e.Message})
+	}
+	return out
+}
+
+func debugLoggerCtx(ctx context.Context, m *memSyncer) context.Context {
+	encCfg := zap.NewProductionEncoderConfig()
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encCfg), m, zapcore.DebugLevel)
+	return ctxzap.ToContext(ctx, zap.New(core))
+}
 
 func scheduleGrantTestResource(t *testing.T, profile map[string]interface{}) *v2.Resource {
 	t.Helper()
@@ -87,7 +133,9 @@ func TestScheduleResourceType_Grants(t *testing.T) {
 
 			resource := scheduleGrantTestResource(t, profile.AsMap())
 
-			grants, _, _, err := srt.Grants(context.Background(), resource, nil)
+			var logs memSyncer
+			ctx := debugLoggerCtx(context.Background(), &logs)
+			grants, _, _, err := srt.Grants(ctx, resource, nil)
 
 			if tt.wantErrCode != codes.OK {
 				if err == nil {
@@ -124,6 +172,31 @@ func TestScheduleResourceType_Grants(t *testing.T) {
 			}
 			if tt.wantSkipped && oncall {
 				t.Error("unexpected on-call grant on the 404 skip path")
+			}
+
+			// Criterion 4 (ci-review L1b): on the 404 skip path the connector
+			// must log exactly ONE Debug skip line and never an Error/Warn-level
+			// entry (the skip returns nil error, so an Error log would be a
+			// false alarm). Pre-existing Info lines (e.g. "no teams found")
+			// are tolerated; the skip line itself is asserted exactly.
+			if tt.wantSkipped {
+				entries := logs.loggedEntries(t)
+				skips := 0
+				for _, e := range entries {
+					lvl := strings.ToUpper(e.Level)
+					switch lvl {
+					case "ERROR", "WARN", "DPANIC", "PANIC", "FATAL":
+						t.Errorf("skip path logged %s-level entry: %q", e.Level, e.Message)
+					case "DEBUG":
+						skips++
+						if !strings.Contains(e.Message, "schedule not found") {
+							t.Errorf("debug log message %q does not mention schedule-not-found", e.Message)
+						}
+					}
+				}
+				if skips != 1 {
+					t.Errorf("skip path logged %d DEBUG skip lines, want 1: %+v", skips, entries)
+				}
 			}
 		})
 	}
