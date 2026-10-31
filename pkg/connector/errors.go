@@ -36,11 +36,17 @@ func wrapPagerDutyError(msg string, err error) error {
 	return uhttp.WrapErrors(codes.Unavailable, fmt.Sprintf("pagerduty-connector: %s", msg), err)
 }
 
-// notFoundOnItem reports whether err is a PagerDuty 404 for the single item
-// being fetched: HTTP 404 or API error code 2100 ("schedule not found"), both
-// detected by pagerduty.APIError.NotFound(). PagerDuty returns 404 for
-// ABSENCE — a deleted/unresolvable object — not for permission denial, which
-// is 403 and must NOT be skipped. This predicate is the raw-error guard used
+// notFoundOnItem reports whether err is a PagerDuty "not found" error for the
+// single item being fetched, per pagerduty.APIError.NotFound(): true when the
+// HTTP status is 404, OR when the parsed API error object has code 2100 —
+// regardless of the HTTP status. Code 2100 is PagerDuty's generic not-found
+// object code (not schedule-specific), so a well-formed error body carrying
+// it is treated as ABSENCE even on a non-404 status; the vendor implements
+// exactly this in go-pagerduty client.go (NotFound: StatusCode == 404 ||
+// ErrorObject.Code == 2100). The wider-than-404 match is safe here because
+// the guarded call fetches exactly one object: any not-found verdict on that
+// call can only mean that object is absent. PagerDuty never uses 404 for
+// permission denial (that is 403), which must NOT be skipped. This predicate is the raw-error guard used
 // before wrapPagerDutyError maps the error; it changes no existing mapping.
 // Rule basis: BUGBOT.md pattern 5; .claude/skills/ci-review.md S5+S6;
 // .claude/skills/connector/patterns-error-handling.md Rule 4.
