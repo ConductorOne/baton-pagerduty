@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/PagerDuty/go-pagerduty"
@@ -180,8 +179,10 @@ func (u *userResourceType) Delete(ctx context.Context, resourceId *v2.ResourceId
 	userID := resourceId.GetResource()
 	err := u.client.DeleteUserWithContext(ctx, userID)
 	if err != nil {
-		var apiErr pagerduty.APIError
-		if errors.As(err, &apiErr) && apiErr.NotFound() {
+		// DELETE /users/{id} is a single-object call, so a not-found verdict
+		// means the user is already gone; see notFoundOnItem for the vendor
+		// semantics (404 or API error code 2100).
+		if notFoundOnItem(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("pagerduty-connector: failed to delete user: %w", err)
