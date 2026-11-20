@@ -1,4 +1,4 @@
-![Baton Logo](./docs/images/baton-logo.png)
+![Baton Logo](./baton-logo.png)
 
 # `baton-pagerduty` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-pagerduty.svg)](https://pkg.go.dev/github.com/conductorone/baton-pagerduty) ![verify](https://github.com/conductorone/baton-pagerduty/actions/workflows/verify.yaml/badge.svg)
 
